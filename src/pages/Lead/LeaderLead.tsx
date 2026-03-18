@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { PageHeader } from "@/components/CommonComponents/PageHeader";
 import { mockAEReps, mockDeals, formatCurrency } from "@/data/mock";
 import { KPICard } from "@/components/CommonComponents/KPICard";
@@ -6,15 +6,19 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Star } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function LeaderLead() {
-  const repName = mockAEReps[0]?.name || "Alex Rodriguez";
+  const [repName, setRepName] = useState<string>(mockAEReps[0]?.name || "Alex Rodriguez");
   const deals = useMemo(() => {
     const list = mockDeals.filter(d => d.owner_name === repName);
     return list.length ? list : mockDeals.slice(0, 3);
   }, [repName]);
   const [idx, setIdx] = useState(0);
   const selected = deals[idx];
+  useEffect(() => {
+    setIdx(0);
+  }, [repName, deals.length]);
 
   const actionsDone = 8;
   const actionsTotal = 10;
@@ -83,11 +87,26 @@ export default function LeaderLead() {
         subtitle="Sync 1:1s, deal deep-dives & action management — ~75 min"
         titleClassName="text-2xl font-bold text-gray-900"
       >
-        {idx === deals.length - 1 && (
-          <Button size="sm" onClick={() => setFeedbackOpen(true)}>
-            360° feedback
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">Reps</span>
+          <Select value={repName} onValueChange={setRepName}>
+            <SelectTrigger className="w-56 h-8 text-xs bg-white">
+              <SelectValue placeholder="Select Rep" />
+            </SelectTrigger>
+            <SelectContent>
+              {mockAEReps.map(r => (
+                <SelectItem key={r.user_id} value={r.name} className="text-xs hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-foreground">
+                  {r.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {idx === deals.length - 1 && (
+            <Button size="sm" onClick={() => setFeedbackOpen(true)}>
+              360° feedback
+            </Button>
+          )}
+        </div>
       </PageHeader>
       <div className="px-6 pb-6 space-y-4">
         <div className="rounded-lg border border-border bg-card">
@@ -138,7 +157,7 @@ export default function LeaderLead() {
                   <div className="text-sm text-foreground">Incumbent + new entrant</div>
                   <div className="text-xs text-muted-foreground">Next Step</div>
                   <div className="text-sm text-foreground">
-                    {selected?.next_step ? `${selected.next_step.owner}: ${selected.next_step.title}` : "Align success criteria"}
+                    {selected?.next_step ? `${selected.next_step.description}` : "Align success criteria"}
                   </div>
                 </div>
               </div>

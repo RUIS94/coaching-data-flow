@@ -70,14 +70,14 @@ export default function SalesEvaluate() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-gray-50">
             <div className="text-sm font-semibold text-foreground">My Coaching History</div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="rounded overflow-x-auto">
+            <table className="w-full text-xs">
               <thead>
-                <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
-                  <th className="py-3 px-4">Date</th>
-                  <th className="py-3 px-4">Focus</th>
-                  <th className="py-3 px-4">Outcome</th>
-                  <th className="py-3 px-4">Note</th>
+                <tr className="border-b border-border text-muted-foreground bg-secondary/40">
+                  <th className="text-left px-4 py-2 font-medium">Date</th>
+                  <th className="text-left px-3 py-2 font-medium">Focus</th>
+                  <th className="text-left px-3 py-2 font-medium">Outcome</th>
+                  <th className="text-left px-3 py-2 font-medium">Note</th>
                 </tr>
               </thead>
               <tbody>

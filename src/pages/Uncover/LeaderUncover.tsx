@@ -85,7 +85,7 @@ export default function LeaderUncover() {
                 <SelectItem
                   key={name}
                   value={name}
-                  className="text-xs hover:bg-gray-100"
+                  className="text-xs hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-foreground"
                 >
                   {name === "all" ? "All Reps" : name}
                 </SelectItem>
@@ -100,18 +100,18 @@ export default function LeaderUncover() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-gray-50">
             <div className="text-sm font-semibold text-foreground">Call Review Queue</div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="rounded overflow-x-auto">
+            <table className="w-full text-xs">
               <thead>
-                <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
-                  {repFilter === "all" && <th className="py-3 px-4">Rep name</th>}
-                  <th className="py-3 px-4">Call name</th>
-                  <th className="py-3 px-4">Duration</th>
-                  <th className="py-3 px-4">Focus Area</th>
-                  <th className="py-3 px-4">AI Score</th>
-                  <th className="py-3 px-4">Talk:Listen</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4"></th>
+                <tr className="border-b border-border text-muted-foreground bg-secondary/40">
+                  {repFilter === "all" && <th className="text-left px-4 py-2 font-medium">Rep</th>}
+                  <th className="text-left px-4 py-2 font-medium">Call</th>
+                  <th className="text-left px-3 py-2 font-medium">Duration</th>
+                  <th className="text-left px-3 py-2 font-medium">Focus Area</th>
+                  <th className="text-left px-3 py-2 font-medium">AI Score</th>
+                  <th className="text-left px-3 py-2 font-medium">Talk:Listen</th>
+                  <th className="text-left px-3 py-2 font-medium">Status</th>
+                  <th className="text-left px-3 py-2 font-medium"></th>
                 </tr>
               </thead>
               <tbody>

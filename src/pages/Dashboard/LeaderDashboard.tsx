@@ -53,6 +53,8 @@ function ManagerViewContent() {
   const [selectedAE, setSelectedAE] = useState<string | null>(null);
   const [segment, setSegment] = useState('all');
   const [agendaAdjustOpen, setAgendaAdjustOpen] = useState(false);
+  const [tierAdjustOpen, setTierAdjustOpen] = useState(false);
+  const [tierOverrides, setTierOverrides] = useState<Record<string, 'sync' | 'async' | 'stretch'>>({});
   const [nudgeTarget, setNudgeTarget] = useState<{ repId: string; name: string } | null>(null);
   const { showSuccess } = useToastContext();
   type AgendaItem = { id: string; status: 'done' | 'current' | 'pending'; time: string; title: string; sub: string; minutes: number; included: boolean };
@@ -269,7 +271,8 @@ function ManagerViewContent() {
   };
   const buckets: Record<'sync' | 'async' | 'stretch', typeof mockAEReps> = { sync: [], async: [], stretch: [] };
   for (const rep of mockAEReps) {
-    const b = classifyRep(rep) as 'sync' | 'async' | 'stretch';
+    const override = tierOverrides[rep.user_id] as 'sync' | 'async' | 'stretch' | undefined;
+    const b = (override ?? classifyRep(rep)) as 'sync' | 'async' | 'stretch';
     buckets[b].push(rep);
   }
   const buildDetails = (rep: (typeof mockAEReps)[number]) => {
@@ -503,17 +506,19 @@ function ManagerViewContent() {
           <Settings className="h-4 w-4" />
         </Button> */}
         <div className="inline-flex items-center gap-8 ml-8">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-40 h-8 text-xs bg-transparent">
-              <SelectValue placeholder="Select time range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem className="hover:bg-muted data-[highlighted]:bg-muted data-[highlighted]:text-foreground" value="This week">This Week</SelectItem>
-              <SelectItem className="hover:bg-muted data-[highlighted]:bg-muted data-[highlighted]:text-foreground" value="This month">This Month</SelectItem>
-              <SelectItem className="hover:bg-muted data-[highlighted]:bg-muted data-[highlighted]:text-foreground" value="This quarter">This Quarter</SelectItem>
-              <SelectItem className="hover:bg-muted data-[highlighted]:bg-muted data-[highlighted]:text-foreground" value="This year">This Year</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="hidden">
+            <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger className="w-40 h-8 text-xs bg-transparent">
+                <SelectValue placeholder="Select time range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem className="hover:bg-muted data-[highlighted]:bg-muted data-[highlighted]:text-foreground" value="This week">This Week</SelectItem>
+                <SelectItem className="hover:bg-muted data-[highlighted]:bg-muted data-[highlighted]:text-foreground" value="This month">This Month</SelectItem>
+                <SelectItem className="hover:bg-muted data-[highlighted]:bg-muted data-[highlighted]:text-foreground" value="This quarter">This Quarter</SelectItem>
+                <SelectItem className="hover:bg-muted data-[highlighted]:bg-muted data-[highlighted]:text-foreground" value="This year">This Year</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="hidden md:flex items-center">
             <div className="flex border rounded-lg overflow-hidden divide-x">
               {[
@@ -659,7 +664,7 @@ function ManagerViewContent() {
               <h2 className="text-sm font-semibold text-foreground">Rep Tiering {tieringHeaderRange}</h2>
               <div className="text-xs text-muted-foreground">AI-suggested based on Risk signals + self-assessments</div>
             </div>
-            <Button variant="ghost" size="sm" className="text-xs text-[#605BFF] hover:bg-muted">Adjust</Button>
+            <Button variant="ghost" size="sm" className="text-xs text-[#605BFF] hover:bg-muted" onClick={() => setTierAdjustOpen(true)}>Adjust</Button>
           </div>
           <div className="space-y-6">
             <div>
@@ -868,6 +873,36 @@ function ManagerViewContent() {
           </div>
           <DialogFooter>
             <Button variant="outline" size="sm" className="text-xs hover:bg-muted hover:text-muted-foreground" onClick={() => setAgendaAdjustOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={tierAdjustOpen} onOpenChange={setTierAdjustOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adjust Rep Tiering</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            {mockAEReps.map(rep => (
+              <div key={rep.user_id} className="flex items-center justify-between gap-3">
+                <span className="text-foreground">{rep.name}</span>
+                <Select
+                  value={(tierOverrides[rep.user_id] ?? classifyRep(rep)) as 'sync' | 'async' | 'stretch'}
+                  onValueChange={(val) => setTierOverrides(prev => ({ ...prev, [rep.user_id]: val as 'sync' | 'async' | 'stretch' }))}
+                >
+                  <SelectTrigger className="w-52 h-8 text-xs bg-white">
+                    <SelectValue placeholder="Select group" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sync" className="text-xs hover:bg-gray-100">Sync 1:1 (Priority)</SelectItem>
+                    <SelectItem value="async" className="text-xs hover:bg-gray-100">Async Only (On Track)</SelectItem>
+                    <SelectItem value="stretch" className="text-xs hover:bg-gray-100">Stretch Assignment</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" className="text-xs hover:bg-muted hover:text-muted-foreground" onClick={() => setTierAdjustOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

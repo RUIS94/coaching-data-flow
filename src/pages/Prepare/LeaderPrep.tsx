@@ -15,6 +15,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
 import { useState, useRef, useMemo } from "react";
 import { useToastContext } from "@/contexts/ToastContext";
+import SalesMethodologyCard from "@/components/Modules/SalesMethodologyCard";
+import BuyerJourneyCard from "@/components/Modules/BuyerJourneyCard";
+import BuyerObjectionsCard from "@/components/Modules/BuyerObjectionsCard";
+import BuyerQuestionsCard from "@/components/Modules/BuyerQuestionsCard";
 
 export default function ManagerPrep() {
   const reps = mockAEReps.slice(0, 6);
@@ -74,6 +78,11 @@ export default function ManagerPrep() {
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
+  const [modulesOpen, setModulesOpen] = useState(false);
+  const [modulesRep, setModulesRep] = useState<string | null>(null);
+  const onModuleDataClick = (title: string, content: string, value: number) => {
+    showSuccess(`${title}: ${content} (${value})`);
+  };
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const rec = new MediaRecorder(stream);
@@ -100,16 +109,17 @@ export default function ManagerPrep() {
   };
   const transcribeAudio = async (blob: Blob) => {
     await new Promise(res => setTimeout(res, 800));
-    return "本周自评要点：需要EB支持；下一步未买方确认；希望获得多线推进建议。";
+    return "Key points: need EB support; next step not buyer-confirmed; request help for multi-threading.";
   };
   const extractFromText = (text: string) => {
-    const points = text.split("；").map(s => s.trim()).filter(Boolean);
+    const parts = text.replace(/^Key points:\s*/i, "").split(";").map(s => s.trim()).filter(Boolean);
+    const points = parts.length ? parts : ["Need EB support", "Next step not buyer-confirmed", "Help with multi-threading stakeholders"];
     const questions = [
-      "这笔交易的EB是谁？如何触达？",
-      "下一步是否买方确认？如何确保？",
-      "还有哪些关键人需要多线推进？",
-      "你认为最大的失单风险是什么？",
-      "需要我提供哪些资源支持？"
+      "What is your mitigation plan around the top risk?",
+      "Is the next step buyer-confirmed? How will you ensure it?",
+      "Which stakeholders should we multi-thread with next?",
+      "What is the biggest loss risk you see now?",
+      "What support or resources do you need from me?"
     ];
     return { points, questions };
   };
@@ -119,16 +129,16 @@ export default function ManagerPrep() {
     const risk = riskLabelFor(repName);
     const help = helpNeededTagsFor(repName);
     const suggestions = [
-      `围绕“${risk}”的缓解计划是什么？`,
-      "请确认买方下一步与日期",
-      "是否需要我协助引荐EB或关键人？",
-      ...help.slice(0, 2).map(h => `关于“${h}”你目前的障碍是什么？`)
+      `What is your mitigation plan around "${risk}"?`,
+      "Please confirm buyer next step and target date",
+      "Do you need my help to reach the EB or other stakeholders?",
+      ...help.slice(0, 2).map(h => `Regarding "${h}", what is blocking you now?`)
     ];
     setNudgeQuestions(suggestions);
     setSelectedQuestions(suggestions.slice(0, 3));
   };
   const sendNudge = () => {
-    if (nudgeRepName) showSuccess(`已向 ${nudgeRepName} 发送提醒`);
+    if (nudgeRepName) showSuccess(`Reminder sent to ${nudgeRepName}`);
     setNudgeOpen(false);
     setNudgeNotes("");
     setNudgeQuestions([]);
@@ -138,27 +148,40 @@ export default function ManagerPrep() {
   };
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [scheduleRep, setScheduleRep] = useState<string | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<{ date: string; time: string; duration: number } | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [scheduledMap, setScheduledMap] = useState<Record<string, string>>({});
   const genSlots = () => {
     const base = new Date();
-    const days = [0, 1, 2].map(d => {
-      const dt = new Date(base);
-      dt.setDate(base.getDate() + d);
-      return dt;
-    });
-    const fmt = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`;
-    const times = ["09:00", "09:30", "10:00", "14:00", "14:30", "15:00"];
-    const durations = [15, 20];
-    const slots: { date: string; time: string; duration: number }[] = [];
-    days.forEach(d => {
-      times.forEach(t => {
-        durations.forEach(u => slots.push({ date: fmt(d), time: t, duration: u }));
-      });
-    });
+    const nextDay = (target: number) => {
+      const d = new Date(base);
+      let diff = (target - d.getDay() + 7) % 7;
+      if (diff === 0) diff = 7;
+      d.setDate(d.getDate() + diff);
+      return d;
+    };
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+    const mkLabel = (day: Date, hour: number, min: number) => {
+      const start = new Date(day);
+      start.setHours(hour, min, 0, 0);
+      const end = new Date(start.getTime() + 20 * 60000);
+      const to12 = (h: number, m: number) => {
+        const am = h < 12;
+        const hh = h % 12 === 0 ? 12 : h % 12;
+        const mm = m.toString().padStart(2, "0");
+        return `${hh}:${mm} ${am ? "AM" : "PM"}`;
+      };
+      return `${dayNames[start.getDay()]}. ${monthNames[start.getMonth()]} ${start.getDate()} ${to12(start.getHours(), start.getMinutes())} - ${to12(end.getHours(), end.getMinutes())}`;
+    };
+    const wed = nextDay(3);
+    const thu = nextDay(4);
+    const times: Array<[number, number]> = [[9,0],[9,30],[14,0]];
+    const slots: string[] = [];
+    times.forEach(([h,m]) => slots.push(mkLabel(wed, h, m)));
+    times.forEach(([h,m]) => slots.push(mkLabel(thu, h, m)));
     return slots;
   };
-  const [slots] = useState(genSlots());
+  const [slots] = useState<string[]>(genSlots());
   const openSchedule = (repName: string) => {
     setScheduleRep(repName);
     setSelectedSlot(null);
@@ -166,9 +189,8 @@ export default function ManagerPrep() {
   };
   const confirmSchedule = () => {
     if (scheduleRep && selectedSlot) {
-      const label = `${selectedSlot.date} ${selectedSlot.time} · ${selectedSlot.duration} min`;
-      setScheduledMap(prev => ({ ...prev, [scheduleRep]: label }));
-      showSuccess(`已为 ${scheduleRep} 安排 ${label}`);
+      setScheduledMap(prev => ({ ...prev, [scheduleRep]: selectedSlot }));
+      showSuccess(`Scheduled ${scheduleRep} — ${selectedSlot}`);
       setScheduleOpen(false);
     }
   };
@@ -212,18 +234,18 @@ export default function ManagerPrep() {
               <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-gray-50">
                 <div className="text-sm font-semibold text-foreground">Rep Self-Assessments</div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+              <div className="rounded overflow-x-auto">
+                <table className="w-full text-xs">
                   <thead>
-                    <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
-                      <th className="py-3 px-4">Rep</th>
-                      <th className="py-3 px-4">Top Deal</th>
-                      <th className="py-3 px-4">Biggest Risk</th>
-                      <th className="py-3 px-4">Help Needed</th>
-                      <th className="py-3 px-4">Commit</th>
-                      <th className="py-3 px-4">Confidence</th>
-                      <th className="py-3 px-4">Status</th>
-                      <th className="py-3 px-4"></th>
+                    <tr className="border-b border-border text-muted-foreground bg-secondary/40">
+                      <th className="text-left px-4 py-2 font-medium">Rep</th>
+                      <th className="text-left px-3 py-2 font-medium">Top Deal</th>
+                      <th className="text-left px-3 py-2 font-medium">Biggest Risk</th>
+                      <th className="text-left px-3 py-2 font-medium">Help Needed</th>
+                      <th className="text-left px-3 py-2 font-medium">Commit</th>
+                      <th className="text-left px-3 py-2 font-medium">Confidence</th>
+                      <th className="text-left px-3 py-2 font-medium">Status</th>
+                      <th className="text-left px-3 py-2 font-medium"></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -256,7 +278,7 @@ export default function ManagerPrep() {
                                     </button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => navigate("/leader-lead")}>Review</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => { setModulesRep(rep.name); setModulesOpen(true); }}>Review</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => openNudge(rep.name)}>Nudge remaining</DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
@@ -286,7 +308,7 @@ export default function ManagerPrep() {
                                     </button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => navigate("/leader-lead")}>Review</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => { setModulesRep(rep.name); setModulesOpen(true); }}>Review</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => openNudge(rep.name)}>Update Request</DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
@@ -308,7 +330,7 @@ export default function ManagerPrep() {
                                     </button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => navigate("/leader-lead")}>Review</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => { setModulesRep(rep.name); setModulesOpen(true); }}>Review</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => openNudge(rep.name)}>Nudge remaining</DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
@@ -347,23 +369,23 @@ export default function ManagerPrep() {
             <Dialog open={nudgeOpen} onOpenChange={setNudgeOpen}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{nudgeRepName ? `提醒 ${nudgeRepName}` : "提醒"}</DialogTitle>
+                  <DialogTitle>{nudgeRepName ? `Send Update Request — ${nudgeRepName}` : "Send Update Request"}</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" onClick={() => setNudgeQuestions(prev => prev.length ? prev : nudgeQuestions)}>
                       <Wand2 className="h-4 w-4 mr-1" />
-                      AI生成问题
+                      Generate Questions (AI)
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => (isRecording ? stopRecording() : startRecording())}>
                       {isRecording ? <MicOff className="h-4 w-4 mr-1" /> : <Mic className="h-4 w-4 mr-1" />}
-                      {isRecording ? "停止录音" : "语音备注"}
+                      {isRecording ? "Stop Recording" : "Voice Note"}
                     </Button>
-                    {audioBlob && <span className="text-xs text-muted-foreground">已录音</span>}
+                    {audioBlob && <span className="text-xs text-muted-foreground">Recorded</span>}
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">Notes</div>
-                    <Textarea value={nudgeNotes} onChange={e => setNudgeNotes(e.target.value)} placeholder="填写提醒备注或要点" />
+                    <Textarea value={nudgeNotes} onChange={e => setNudgeNotes(e.target.value)} placeholder="Add notes or key points" />
                   </div>
                   <div>
                     <div className="text-xs text-muted-foreground mb-1">Questions</div>
@@ -387,7 +409,7 @@ export default function ManagerPrep() {
                 <DialogFooter>
                   <Button onClick={sendNudge} className="text-xs">
                     <Send className="h-3.5 w-3.5 mr-1" />
-                    发送提醒
+                    Send Reminder
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -422,11 +444,11 @@ export default function ManagerPrep() {
                       </ul>
                       <div className="mt-3 flex items-center justify-between">
                         <div className="text-xs text-muted-foreground">
-                          {scheduledMap[rep.name] ? `Scheduled: ${scheduledMap[rep.name]}` : "未安排会议"}
+                          {scheduledMap[rep.name] ? `Scheduled: ${scheduledMap[rep.name]}` : "Not scheduled"}
                         </div>
                         <Button size="sm" variant="outline" className="text-xs" onClick={() => openSchedule(rep.name)}>
                           <CalendarIcon className="h-3.5 w-3.5 mr-1" />
-                          安排15-20分钟
+                          {scheduledMap[rep.name] ? "Update" : "Schedule 20-min"}
                         </Button>
                       </div>
                     </div>
@@ -436,32 +458,51 @@ export default function ManagerPrep() {
               <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{scheduleRep ? `为 ${scheduleRep} 安排会议` : "安排会议"}</DialogTitle>
+                    <DialogTitle>{scheduleRep ? `Schedule 1:1 — ${scheduleRep}` : "Schedule 1:1"}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-3">
-                    <div className="text-xs text-muted-foreground">选择一个15或20分钟的空闲时间</div>
+                    <div className="text-xs text-muted-foreground">Select a 20-minute slot (Wed–Thu)</div>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       {slots.map(s => (
                         <button
-                          key={`${s.date}-${s.time}-${s.duration}`}
+                          key={s}
                           onClick={() => setSelectedSlot(s)}
-                          className={`text-xs px-2 py-1 rounded border ${selectedSlot && selectedSlot.date === s.date && selectedSlot.time === s.time && selectedSlot.duration === s.duration ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-border"}`}
+                          className={`text-xs px-2 py-1 rounded border ${selectedSlot === s ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-border"}`}
                         >
-                          {s.date} {s.time} · {s.duration} min
+                          {s}
                         </button>
                       ))}
                     </div>
                   </div>
                   <DialogFooter>
                     <Button disabled={!selectedSlot} onClick={confirmSchedule} className="text-xs">
-                      确认安排
+                      Confirm
                     </Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
+            
             </div>
           </TabsContent>
         </Tabs>
+        <Dialog open={modulesOpen} onOpenChange={setModulesOpen}>
+          <DialogContent className="max-w-5xl w-[92vw]">
+            <DialogHeader>
+              <DialogTitle>{modulesRep ? `Coaching Modules — ${modulesRep}` : "Coaching Modules"}</DialogTitle>
+            </DialogHeader>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <SalesMethodologyCard onDataClick={onModuleDataClick} />
+              <BuyerJourneyCard onDataClick={onModuleDataClick} />
+              <BuyerObjectionsCard onDataClick={onModuleDataClick} />
+              <BuyerQuestionsCard onDataClick={onModuleDataClick} />
+            </div>
+            <DialogFooter>
+              <Button variant="outline" size="sm" className="text-xs hover:bg-muted hover:text-muted-foreground" onClick={() => setModulesOpen(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

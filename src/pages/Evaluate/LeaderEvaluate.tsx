@@ -44,16 +44,16 @@ export default function LeaderEvaluate() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-gray-50">
             <div className="text-sm font-semibold text-foreground">4-Week Coaching Tracker</div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="rounded overflow-x-auto">
+            <table className="w-full text-xs">
               <thead>
-                <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground">
-                  <th className="py-3 px-4">Rep</th>
-                  <th className="py-3 px-4">Coaching Focus</th>
-                  <th className="py-3 px-4">Behavior Change</th>
-                  <th className="py-3 px-4">Deal Outcomes</th>
-                  <th className="py-3 px-4">Skill Rating</th>
-                  <th className="py-3 px-4">Trend</th>
+                <tr className="border-b border-border text-muted-foreground bg-secondary/40">
+                  <th className="text-left px-4 py-2 font-medium">Rep</th>
+                  <th className="text-left px-3 py-2 font-medium">Coaching Focus</th>
+                  <th className="text-left px-3 py-2 font-medium">Behavior Change</th>
+                  <th className="text-left px-3 py-2 font-medium">Deal Outcomes</th>
+                  <th className="text-left px-3 py-2 font-medium">Skill Rating</th>
+                  <th className="text-left px-3 py-2 font-medium">Trend</th>
                 </tr>
               </thead>
               <tbody>
