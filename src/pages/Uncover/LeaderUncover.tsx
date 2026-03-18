@@ -73,21 +73,28 @@ export default function LeaderUncover() {
         title="U — Uncover"
         subtitle="Call coaching, skill diagnosis & voice note delivery — ~60 min"
         titleClassName="text-2xl font-bold text-gray-900"
-      />
-      <div className="px-6 pb-6 space-y-4">
+      >
         <div className="flex items-center gap-3">
           <span className="text-sm text-muted-foreground">Reps</span>
           <Select value={repFilter} onValueChange={setRepFilter}>
             <SelectTrigger className="w-56 h-8 text-xs bg-white">
-              <SelectValue placeholder="All reps" />
+              <SelectValue placeholder="All Reps" />
             </SelectTrigger>
             <SelectContent>
               {reps.map(name => (
-                <SelectItem key={name} value={name} className="text-xs">{name === "all" ? "All" : name}</SelectItem>
+                <SelectItem
+                  key={name}
+                  value={name}
+                  className="text-xs hover:bg-gray-100"
+                >
+                  {name === "all" ? "All Reps" : name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
+      </PageHeader>
+      <div className="px-6 pb-6 space-y-4">
 
         <div className="rounded-lg border border-border bg-card">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-gray-50">

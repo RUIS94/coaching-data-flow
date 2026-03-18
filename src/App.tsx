@@ -178,6 +178,23 @@ const App = () => {
                         )}
                         {role === "leader" ? (
                           <Link
+                            to="/leader-lead"
+                            className={`w-full flex items-center ${isNavCollapsed ? "justify-center px-2" : "space-x-3 px-4"} py-3 rounded-lg text-left transition-colors whitespace-nowrap text-gray-700 hover:bg-gray-100`}
+                          >
+                            <ClipboardList className="w-5 h-5 flex-shrink-0" />
+                            {!isNavCollapsed && <span className="font-medium">Lead</span>}
+                          </Link>
+                        ) : (
+                          <Link
+                            to="/sales-lead"
+                            className={`w-full flex items-center ${isNavCollapsed ? "justify-center px-2" : "space-x-3 px-4"} py-3 rounded-lg text-left transition-colors whitespace-nowrap text-gray-700 hover:bg-gray-100`}
+                          >
+                            <ClipboardList className="w-5 h-5 flex-shrink-0" />
+                            {!isNavCollapsed && <span className="font-medium">Lead</span>}
+                          </Link>
+                        )}
+                        {role === "leader" ? (
+                          <Link
                             to="/leader-sync"
                             className={`w-full flex items-center ${isNavCollapsed ? "justify-center px-2" : "space-x-3 px-4"} py-3 rounded-lg text-left transition-colors whitespace-nowrap text-gray-700 hover:bg-gray-100`}
                           >
@@ -210,37 +227,6 @@ const App = () => {
                             {!isNavCollapsed && <span className="font-medium">Evaluate</span>}
                           </Link>
                         )}
-                        {role === "leader" ? (
-                          <Link
-                            to="/leader-lead"
-                            className={`w-full flex items-center ${isNavCollapsed ? "justify-center px-2" : "space-x-3 px-4"} py-3 rounded-lg text-left transition-colors whitespace-nowrap text-gray-700 hover:bg-gray-100`}
-                          >
-                            <ClipboardList className="w-5 h-5 flex-shrink-0" />
-                            {!isNavCollapsed && <span className="font-medium">Lead</span>}
-                          </Link>
-                        ) : (
-                          <Link
-                            to="/sales-lead"
-                            className={`w-full flex items-center ${isNavCollapsed ? "justify-center px-2" : "space-x-3 px-4"} py-3 rounded-lg text-left transition-colors whitespace-nowrap text-gray-700 hover:bg-gray-100`}
-                          >
-                            <ClipboardList className="w-5 h-5 flex-shrink-0" />
-                            {!isNavCollapsed && <span className="font-medium">Lead</span>}
-                          </Link>
-                        )}
-                        <Link
-                          to="/deal-drilldown/rep-1"
-                          className={`w-full flex items-center ${isNavCollapsed ? "justify-center px-2" : "space-x-3 px-4"} py-3 rounded-lg text-left transition-colors whitespace-nowrap text-gray-700 hover:bg-gray-100`}
-                        >
-                          <Users2 className="w-5 h-5 flex-shrink-0" />
-                          {!isNavCollapsed && <span className="font-medium">Deal Drilldown</span>}
-                        </Link>
-                        <Link
-                          to="/deal-analytics/deal-1"
-                          className={`w-full flex items-center ${isNavCollapsed ? "justify-center px-2" : "space-x-3 px-4"} py-3 rounded-lg text-left transition-colors whitespace-nowrap text-gray-700 hover:bg-gray-100`}
-                        >
-                          <BarChart3 className="w-5 h-5 flex-shrink-0" />
-                          {!isNavCollapsed && <span className="font-medium">Deal Analytics</span>}
-                        </Link>
                         <Link
                           to="/coaching-session"
                           className={`w-full flex items-center ${isNavCollapsed ? "justify-center px-2" : "space-x-3 px-4"} py-3 rounded-lg text-left transition-colors whitespace-nowrap text-gray-700 hover:bg-gray-100`}
@@ -297,6 +283,23 @@ const App = () => {
                       )}
                       {role === "leader" ? (
                         <Link
+                          to="/leader-lead"
+                          className={`w-full flex items-center ${isNavCollapsed ? "justify-center px-2" : "space-x-3 px-4"} py-3 rounded-lg text-left transition-colors whitespace-nowrap text-gray-700 hover:bg-gray-100`}
+                        >
+                          <ClipboardList className="w-5 h-5 flex-shrink-0" />
+                          {!isNavCollapsed && <span className="font-medium">Lead</span>}
+                        </Link>
+                      ) : (
+                        <Link
+                          to="/sales-lead"
+                          className={`w-full flex items-center ${isNavCollapsed ? "justify-center px-2" : "space-x-3 px-4"} py-3 rounded-lg text-left transition-colors whitespace-nowrap text-gray-700 hover:bg-gray-100`}
+                        >
+                          <ClipboardList className="w-5 h-5 flex-shrink-0" />
+                          {!isNavCollapsed && <span className="font-medium">Lead</span>}
+                        </Link>
+                      )}
+                      {role === "leader" ? (
+                        <Link
                           to="/leader-sync"
                           className={`w-full flex items-center ${isNavCollapsed ? "justify-center px-2" : "space-x-3 px-4"} py-3 rounded-lg text-left transition-colors whitespace-nowrap text-gray-700 hover:bg-gray-100`}
                         >
@@ -329,37 +332,6 @@ const App = () => {
                           {!isNavCollapsed && <span className="font-medium">Evaluate</span>}
                         </Link>
                       )}
-                      {role === "leader" ? (
-                        <Link
-                          to="/leader-lead"
-                          className={`w-full flex items-center ${isNavCollapsed ? "justify-center px-2" : "space-x-3 px-4"} py-3 rounded-lg text-left transition-colors whitespace-nowrap text-gray-700 hover:bg-gray-100`}
-                        >
-                          <ClipboardList className="w-5 h-5 flex-shrink-0" />
-                          {!isNavCollapsed && <span className="font-medium">Lead</span>}
-                        </Link>
-                      ) : (
-                        <Link
-                          to="/sales-lead"
-                          className={`w-full flex items-center ${isNavCollapsed ? "justify-center px-2" : "space-x-3 px-4"} py-3 rounded-lg text-left transition-colors whitespace-nowrap text-gray-700 hover:bg-gray-100`}
-                        >
-                          <ClipboardList className="w-5 h-5 flex-shrink-0" />
-                          {!isNavCollapsed && <span className="font-medium">Lead</span>}
-                        </Link>
-                      )}
-                      <Link
-                        to="/deal-drilldown/rep-1"
-                        className={`w-full flex items-center ${isNavCollapsed ? "justify-center px-2" : "space-x-3 px-4"} py-3 rounded-lg text-left transition-colors whitespace-nowrap text-gray-700 hover:bg-gray-100`}
-                      >
-                        <Users2 className="w-5 h-5 flex-shrink-0" />
-                        {!isNavCollapsed && <span className="font-medium">Deal Drilldown</span>}
-                      </Link>
-                      <Link
-                        to="/deal-analytics/deal-1"
-                        className={`w-full flex items-center ${isNavCollapsed ? "justify-center px-2" : "space-x-3 px-4"} py-3 rounded-lg text-left transition-colors whitespace-nowrap text-gray-700 hover:bg-gray-100`}
-                      >
-                        <BarChart3 className="w-5 h-5 flex-shrink-0" />
-                        {!isNavCollapsed && <span className="font-medium">Deal Analytics</span>}
-                      </Link>
                       <Link
                         to="/coaching-session"
                         className={`w-full flex items-center ${isNavCollapsed ? "justify-center px-2" : "space-x-3 px-4"} py-3 rounded-lg text-left transition-colors whitespace-nowrap text-gray-700 hover:bg-gray-100`}

@@ -9,18 +9,34 @@ export default function LeaderSync() {
   const commitDeals = mockDeals.filter(d => d.forecast_category === "COMMIT");
   const teamCommitAmt = commitDeals.reduce((sum, d) => sum + d.amount, 0);
   const teamCommitCount = commitDeals.length;
+  const baseMonthlyTarget = 1200000;
+  const teamTargetAmt = Math.round(baseMonthlyTarget / 4);
 
   const redRiskDeals = mockDeals.filter(d => d.risk_level === "RED");
   const topRiskAmt = redRiskDeals.reduce((sum, d) => sum + d.amount, 0);
   const topRiskDealCount = redRiskDeals.length;
   const topRiskReasonCount = redRiskDeals.reduce((sum, d) => sum + (Array.isArray(d.risk_reasons) ? d.risk_reasons.length : 0), 0);
+  const riskCounts = mockDeals.reduce<Record<string, number>>((acc, d) => {
+    for (const r of d.risk_reasons || []) {
+      acc[r.code] = (acc[r.code] ?? 0) + 1;
+    }
+    return acc;
+  }, {});
+  const riskEntries = Object.entries(riskCounts).sort((a, b) => b[1] - a[1]);
+  const topRisk = riskEntries[0] ?? null;
+  const topRiskCode = topRisk ? topRisk[0] : null;
+  const topRiskCount = topRisk ? topRisk[1] : 0;
+  const prettyCode = (code: string) =>
+    code
+      .split("_")
+      .map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase())
+      .join(" ");
 
   const winsAmt = 320000;
   const winsDealCount = 3;
   const winsRepCount = 2;
 
-  const helpRequestCount = 4;
-  const helpTypes = "Pricing, EB intro";
+  const helpRequestCount = mockDeals.reduce((sum, d) => sum + ((d.help_needed?.length ?? 0)), 0);
 
   const talkingPoints = [
     "Team Commit momentum strong; reinforce EB access on red-risk deals.",
@@ -54,33 +70,25 @@ export default function LeaderSync() {
                 label="Team Commit"
                 value={formatCurrency(teamCommitAmt)}
                 secondaryValue={`${teamCommitCount} deals`}
-                trend="up"
-                trendLabel="+$120K vs last week"
-                trendPositive={true}
+                trend={teamCommitAmt >= teamTargetAmt ? "up" : "down"}
+                trendLabel={`vs. ${formatCurrency(teamTargetAmt)} target`}
+                trendPositive={teamCommitAmt >= teamTargetAmt}
               />
               <KPICard
                 label="Top Risks"
-                value={formatCurrency(topRiskAmt)}
-                secondaryValue={`${topRiskDealCount} deals · ${topRiskReasonCount} risks`}
-                trend="flat"
-                trendLabel="Monitoring"
-                trendPositive={false}
+                value={`${topRiskCount}`}
+                note={topRiskCode ? `${prettyCode(topRiskCode)}: ${topRiskCount}` : "—"}
               />
               <KPICard
                 label="Wins This Week"
                 value={formatCurrency(winsAmt)}
                 secondaryValue={`${winsDealCount} deals · ${winsRepCount} reps`}
-                trend="up"
-                trendLabel="+2 wins"
-                trendPositive={true}
+                note={`Wins: ${winsDealCount}`}
               />
               <KPICard
                 label="Help Requests"
                 value={`${helpRequestCount}`}
-                secondaryValue={helpTypes}
-                trend="flat"
-                trendLabel="New requests in"
-                trendPositive={false}
+                note={`Help Needed: ${helpRequestCount}`}
               />
             </div>
           </div>
@@ -92,13 +100,11 @@ export default function LeaderSync() {
             <div className="text-xs text-muted-foreground">Generated from Pipeline Pulse posts and CRM signals</div>
           </div>
           <div className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {talkingPoints.map((tp, idx) => (
-                <div key={idx} className="rounded-lg border border-border bg-white p-3">
-                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Talking Point {idx + 1}</div>
-                  <div className="text-sm text-foreground">{tp}</div>
-                </div>
-              ))}
+            <div className="space-y-2">
+              <div className="text-sm text-foreground">1. Commit status: We're at {formatCurrency(teamCommitAmt)} vs {formatCurrency(teamTargetAmt)} target</div>
+              <div className="text-sm text-foreground">2. Wins: {winsDealCount} deals this week</div>
+              <div className="text-sm text-foreground">3. Common theme: {topRiskCode ? prettyCode(topRiskCode) : "—"}</div>
+              <div className="text-sm text-foreground">4. Priority for next week: Map stakeholders and secure EB access</div>
             </div>
           </div>
         </div>

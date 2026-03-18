@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/CommonComponents/PageHeader";
 import { KPICard } from "@/components/CommonComponents/KPICard";
 import { mockAEReps } from "@/data/mock";
+import { Textarea } from "@/components/ui/textarea";
 
 type TrackerRow = {
   rep: string;
@@ -20,9 +21,9 @@ const trackerData: TrackerRow[] = [
 
 export default function LeaderEvaluate() {
   const winRate = "31%";
-  const forecastAccuracy = "±7%";
-  const dealProgression = "12 moved";
-  const coachingCadence = "2/wk";
+  const forecastAccuracy = "78%";
+  const dealProgression = "24%";
+  const coachingCadence = "82%";
 
   return (
     <div className="h-full bg-white overflow-auto">
@@ -81,19 +82,27 @@ export default function LeaderEvaluate() {
             <div className="text-xs text-muted-foreground">Use these prompts to guide continuous improvement</div>
           </div>
           <div className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {[
-                "Which coaching theme drove measurable deal movement?",
-                "Where did forecast variance originate this week?",
-                "What pattern in discovery depth needs reinforcement?",
-                "Which rep should present a win/learning clip to peers?",
-                "What is the single highest-impact hygiene improvement next week?"
-              ].map((q, idx) => (
-                <div key={idx} className="rounded-lg border border-border bg-white p-3">
-                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Question {idx + 1}</div>
-                  <div className="text-sm text-foreground">{q}</div>
-                </div>
-              ))}
+            <div className="space-y-3">
+              <div>
+                <div className="text-sm text-foreground">1. Which coaching theme drove measurable deal movement?</div>
+                <Textarea placeholder="Write your reflection..." className="mt-1" />
+              </div>
+              <div>
+                <div className="text-sm text-foreground">2. Where did forecast variance originate this week?</div>
+                <Textarea placeholder="Write your reflection..." className="mt-1" />
+              </div>
+              <div>
+                <div className="text-sm text-foreground">3. What pattern in discovery depth needs reinforcement?</div>
+                <Textarea placeholder="Write your reflection..." className="mt-1" />
+              </div>
+              <div>
+                <div className="text-sm text-foreground">4. Which rep should present a win/learning clip to peers?</div>
+                <Textarea placeholder="Write your reflection..." className="mt-1" />
+              </div>
+              <div>
+                <div className="text-sm text-foreground">5. What is the single highest-impact hygiene improvement next week?</div>
+                <Textarea placeholder="Write your reflection..." className="mt-1" />
+              </div>
             </div>
           </div>
         </div>

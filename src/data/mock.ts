@@ -31,6 +31,7 @@ export interface Deal {
   impact_rank: number;
   need_coaching?: boolean;
   self_assessment_status?: SelfAssessmentStatus;
+  help_needed?: string[];
 }
 
 export interface AERep {
@@ -110,6 +111,7 @@ export const mockDeals: Deal[] = [
     risk_level: 'AMBER', risk_reasons: [risk('CLOSE_DATE_MOVED', 'AMBER'), risk('MISSING_EB', 'RED')],
     staleness_days: 5, stage_dwell_days: 14, next_step: { description: 'Security review call', date: dateInDays(4), is_buyer_confirmed: true }, impact_rank: 2,
     need_coaching: true, self_assessment_status: 'SUBMITTED',
+    help_needed: ['Intro to their CFO', 'Deal strategy for compelling event'],
   },
   {
     deal_id: '3', deal_name: 'Cloud Migration Package', account_name: 'GlobalBank',
@@ -118,6 +120,7 @@ export const mockDeals: Deal[] = [
     risk_level: 'AMBER', risk_reasons: [risk('STAGE_STUCK', 'AMBER'), risk('WEAK_VALUE', 'AMBER')],
     staleness_days: 3, stage_dwell_days: 28, next_step: { description: 'Workshop with IT team', date: dateInDays(6), is_buyer_confirmed: false }, impact_rank: 3,
     need_coaching: true, self_assessment_status: 'SUBMITTED',
+    help_needed: ['Competitive positioning help'],
   },
   {
     deal_id: '4', deal_name: 'Security Compliance Tool', account_name: 'MedHealth',
@@ -126,6 +129,7 @@ export const mockDeals: Deal[] = [
     risk_level: 'GREEN', risk_reasons: [],
     staleness_days: 1, stage_dwell_days: 7, next_step: { description: 'Procurement sign-off', date: dateInDays(8), is_buyer_confirmed: true }, impact_rank: 4,
     need_coaching: true, self_assessment_status: 'PENDING',
+    help_needed: ['Deal strategy for compelling event'],
   },
   {
     deal_id: '5', deal_name: 'HR Automation Platform', account_name: 'PeopleFirst',
@@ -141,6 +145,7 @@ export const mockDeals: Deal[] = [
     risk_level: 'GREEN', risk_reasons: [risk('NO_MAP', 'AMBER')],
     staleness_days: 2, stage_dwell_days: 10, next_step: { description: 'Budget approval meeting', date: dateInDays(12), is_buyer_confirmed: true }, impact_rank: 6,
     need_coaching: true, self_assessment_status: 'SUBMITTED',
+    help_needed: ['Executive alignment'],
   },
   {
     deal_id: '7', deal_name: 'Customer Success Platform', account_name: 'RetailMax',
@@ -149,6 +154,7 @@ export const mockDeals: Deal[] = [
     risk_level: 'AMBER', risk_reasons: [risk('SINGLE_THREADED', 'AMBER'), risk('MISSING_EB', 'AMBER')],
     staleness_days: 7, stage_dwell_days: 18, next_step: { description: 'Exec sponsor intro', date: dateInDays(14), is_buyer_confirmed: false }, impact_rank: 7,
     need_coaching: true, self_assessment_status: 'TODO',
+    help_needed: ['Multi-threading stakeholders', 'Intro to their CFO'],
   },
   {
     deal_id: '8', deal_name: 'API Gateway Enterprise', account_name: 'FinServ Group',
@@ -165,6 +171,7 @@ export const mockDeals: Deal[] = [
     risk_level: 'AMBER', risk_reasons: [risk('MISSING_EB', 'RED')],
     staleness_days: 4, stage_dwell_days: 9, next_step: null, impact_rank: 9,
     need_coaching: true, self_assessment_status: 'SUBMITTED',
+    help_needed: ['Executive alignment', 'Next step coaching'],
   },
   {
     deal_id: '10', deal_name: 'Support Automation', account_name: 'HelpDeskCo',
@@ -173,6 +180,7 @@ export const mockDeals: Deal[] = [
     risk_level: 'GREEN', risk_reasons: [],
     staleness_days: 6, stage_dwell_days: 12, next_step: { description: 'EB sign-off', date: dateInDays(10), is_buyer_confirmed: true }, impact_rank: 10,
     need_coaching: true, self_assessment_status: 'SUBMITTED',
+    help_needed: ['Proof points'],
   },
   {
     deal_id: '11', deal_name: 'Compliance Suite', account_name: 'SecureBank',
@@ -181,6 +189,7 @@ export const mockDeals: Deal[] = [
     risk_level: 'AMBER', risk_reasons: [risk('NO_MAP', 'AMBER'), risk('SINGLE_THREADED', 'AMBER')],
     staleness_days: 3, stage_dwell_days: 17, next_step: { description: 'Legal review', date: dateInDays(5), is_buyer_confirmed: false }, impact_rank: 11,
     need_coaching: true, self_assessment_status: 'SUBMITTED',
+    help_needed: ['Competitive positioning help', 'Multi-threading stakeholders'],
   },
   {
     deal_id: '12', deal_name: 'API Observability', account_name: 'DevOps Labs',

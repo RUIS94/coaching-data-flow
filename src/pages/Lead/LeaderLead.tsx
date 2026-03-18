@@ -114,7 +114,7 @@ export default function LeaderLead() {
           <div className="p-4 space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <KPICard label="Actions last week" value={`${actionsDone}/${actionsTotal}`} />
-              <KPICard label="Deals progressed" value={`${dealsProgressed}`} />
+              <KPICard label="Deals progressed" value={`${idx + 1} of ${deals.length}`} />
               <KPICard label="Call coaching score" value={`${coachingScore.toFixed(1)} / 10`} />
               <KPICard label="Confidence" value={`${confidence.toFixed(1)} / 10`} />
             </div>
