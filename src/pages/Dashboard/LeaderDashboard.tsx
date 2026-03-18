@@ -7,14 +7,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { KPICard } from "@/components/CommonComponents/KPICard";
 import { DealRow } from "@/components/CommonComponents/DealRow";
 import { StatusDot } from "@/components/CommonComponents/StatusDot";
-import { mockDeals, mockAEReps, formatCurrency, type Deal, type RiskReason } from "@/data/mock";
+import { mockDeals, mockAEReps, mockCalls, formatCurrency, type Deal, type RiskReason } from "@/data/mock";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import SalesMethodologyCard from "@/components/enterprise/Modules/SalesMethodologyCard";
-import BuyerJourneyCard from "@/components/enterprise/Modules/BuyerJourneyCard";
-import BuyerObjectionsCard from "@/components/enterprise/Modules/BuyerObjectionsCard";
-import BuyerQuestionsCard from "@/components/enterprise/Modules/BuyerQuestionsCard";
-import EmptyPopup from "@/components/enterprise/Popup/EmptyPopup";
+import SalesMethodologyCard from "@/components/Modules/SalesMethodologyCard";
+import BuyerJourneyCard from "@/components/Modules/BuyerJourneyCard";
+import BuyerObjectionsCard from "@/components/Modules/BuyerObjectionsCard";
+import BuyerQuestionsCard from "@/components/Modules/BuyerQuestionsCard";
+import EmptyPopup from "@/components/CommonComponents/EmptyPopup";
 import IndividualView from "@/pages/ManagerDashboard/IndividualView";
 import { useToastContext } from "@/contexts/ToastContext";
 
@@ -151,11 +151,12 @@ function ManagerViewContent() {
   const hygieneGapCntAllPrev = previousWindowDeals.filter(d => pipelineFilterAll(d) && isHygieneGap(d)).length;
   const actionsCompletedPctPrev = hygieneEligibleCntAllPrev ? Math.round(((hygieneEligibleCntAllPrev - hygieneGapCntAllPrev) * 100) / hygieneEligibleCntAllPrev) : 0;
   const actionsCompletedDeltaPct = actionsCompletedPctCur - actionsCompletedPctPrev;
-  const totalAE = mockAEReps.length;
-  const submittedAECurrent = new Set(currentWindowDeals.map(d => d.owner_name)).size;
-  const submittedAEPrev = new Set(previousWindowDeals.map(d => d.owner_name)).size;
-  const assessmentsPending = Math.max(0, totalAE - submittedAECurrent);
-  const assessmentsDelta = submittedAECurrent - submittedAEPrev;
+  const coachingEligibleCur = currentWindowDeals.filter(d => d.need_coaching);
+  const assessmentsSubmittedCur = coachingEligibleCur.filter(d => d.self_assessment_status === 'SUBMITTED').length;
+  const coachingEligiblePrev = previousWindowDeals.filter(d => d.need_coaching);
+  const assessmentsSubmittedPrev = coachingEligiblePrev.filter(d => d.self_assessment_status === 'SUBMITTED').length;
+  const assessmentsPending = coachingEligibleCur.filter(d => d.self_assessment_status === 'PENDING' || d.self_assessment_status === 'TODO').length;
+  const assessmentsDelta = assessmentsSubmittedCur - assessmentsSubmittedPrev;
   const worstCaseTopCur = currentWindowDeals
     .filter(d => d.forecast_category === 'COMMIT' && d.risk_level === 'RED')
     .slice()
@@ -318,6 +319,11 @@ function ManagerViewContent() {
       : timeRange === 'This year'
       ? formatYearLabel(now)
       : formatMonthLabel(now);
+  const flaggedCallsCur = mockCalls.filter(c => {
+    const d = new Date(c.date).getTime();
+    const diffDays = Math.floor((Date.now() - d) / (1000 * 60 * 60 * 24));
+    return diffDays <= cfg.curMax && c.flagged;
+  }).length;
   const funnelStages = ['Discovery', 'Validation', 'Proposal', 'Negotiation', 'Closed Won'];
   const bench: Record<string, number> = { 'Discovery': 10, 'Validation': 8, 'Proposal': 12, 'Negotiation': 10, 'Closed Won': 0 };
   const dealsForFunnel = currentWindowDeals;
@@ -481,6 +487,7 @@ function ManagerViewContent() {
       : timeRange === 'This quarter'
       ? 'Quarter'
       : 'Year';
+  const totalAE = mockAEReps.length;
   const headerSubtitle = `${subtitlePeriodWord} of ${targetPeriodLabel} — ${totalAE} reps managed`;
   return (
     <div className="flex flex-col min-h-0 h-full bg-white">
@@ -574,7 +581,7 @@ function ManagerViewContent() {
         />
         <KPICard
           label="Assessments In"
-          value={`${submittedAECurrent}/${totalAE}`}
+          value={`${assessmentsSubmittedCur}/${coachingEligibleCur.length}`}
           trend="flat"
           trendLabel={`${assessmentsPending} pending — nudge sent`}
           trendPositive={assessmentsDelta > 0}
@@ -632,8 +639,8 @@ function ManagerViewContent() {
                             {!isLast && <div className={`absolute left-[-20px] top-1/2 bottom-[-12px] w-0.5 ${bottomLineClass}`} />}
                             <div className={`absolute left-[-20px] top-1/2 -translate-x-1/2 -translate-y-1/2 h-3 w-3 rounded-full ring-2 ring-background ${dotClass}`} />
                             <div className="text-[11px] text-muted-foreground">{i.time} — {i.minutes} min</div>
-                            <div className="text-sm font-medium text-foreground">{i.title}</div>
-                            <div className="text-[11px] text-muted-foreground">{i.sub}</div>
+                            <div className="text-sm font-medium text-foreground">{i.id === 'uncover1' ? `Review ${flaggedCallsCur} flagged calls at 2x speed` : i.title}</div>
+                            <div className="text-[11px] text-muted-foreground">{i.id === 'prep' ? `${assessmentsSubmittedCur}/${coachingEligibleCur.length} assessments received · ${topRiskAlerts.length} CRM alerts flagged` : i.sub}</div>
                           </div>
                         </div>
                       );});
@@ -921,6 +928,70 @@ function ManagerViewContent() {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      </div>
+      <div className="px-4 sm:px-6 pb-6">
+        <div className="rounded-lg border border-border bg-card p-4">
+          <div className="flex items-start justify-between mb-3">
+            <div>
+              <div className="text-sm font-semibold text-foreground">Top Deals</div>
+              <div className="text-xs text-muted-foreground">Commit + Best Case this period</div>
+            </div>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#605BFF]/10 text-[#605BFF]">
+              {currentWindowDeals.filter(d => d.forecast_category === 'COMMIT' || d.forecast_category === 'BEST_CASE').length} deals
+            </span>
+          </div>
+          <div className="rounded overflow-x-auto">
+            {(() => {
+              const rows = currentWindowDeals
+                .filter(d => d.forecast_category === 'COMMIT' || d.forecast_category === 'BEST_CASE')
+                .slice()
+                .sort((a, b) => b.amount - a.amount)
+                .slice(0, 8);
+              return (
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border text-muted-foreground bg-secondary/40">
+                      <th className="text-left px-4 py-2 font-medium" style={{ width: '26ch' }}>Deal</th>
+                      <th className="text-left px-3 py-2 font-medium" style={{ width: '18ch' }}>Rep</th>
+                      <th className="text-right px-3 py-2 font-medium" style={{ width: '12ch' }}>Amount</th>
+                      <th className="text-left px-3 py-2 font-medium" style={{ width: '16ch' }}>Stage</th>
+                      <th className="text-left px-3 py-2 font-medium" style={{ width: '16ch' }}>Forecast</th>
+                      <th className="text-left px-3 py-2 font-medium" style={{ width: '16ch' }}>Next Step</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((d) => (
+                      <tr key={d.deal_id} className="border-b border-border last:border-0">
+                        <td className="px-4 py-2 align-top">
+                          <div className="text-foreground font-medium">{d.account_name}</div>
+                          <div className="text-[11px] text-muted-foreground">{d.deal_name}</div>
+                        </td>
+                        <td className="px-3 py-2 align-top">{d.owner_name}</td>
+                        <td className="px-3 py-2 align-top text-right">{formatCurrency(d.amount)}</td>
+                        <td className="px-3 py-2 align-top">{d.stage_name}</td>
+                        <td className="px-3 py-2 align-top">{d.forecast_category}</td>
+                        <td className="px-3 py-2 align-top">
+                          {d.next_step ? (
+                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${d.next_step.is_buyer_confirmed ? 'bg-status-green/10 text-status-green' : 'bg-secondary/50 text-muted-foreground'}`}>
+                              {d.next_step.is_buyer_confirmed ? 'Buyer confirmed' : 'Not confirmed'}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary/50 text-muted-foreground">No next step</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {rows.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">No top deals this period.</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              );
+            })()}
           </div>
         </div>
       </div>

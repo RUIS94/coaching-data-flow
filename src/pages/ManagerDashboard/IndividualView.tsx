@@ -10,11 +10,11 @@ import { StatusDot } from "@/components/CommonComponents/StatusDot";
 import { mockDeals, mockAEReps, formatCurrency, type Deal } from "@/data/mock";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import SalesMethodologyCard from "@/components/enterprise/Modules/SalesMethodologyCard";
-import BuyerJourneyCard from "@/components/enterprise/Modules/BuyerJourneyCard";
-import BuyerObjectionsCard from "@/components/enterprise/Modules/BuyerObjectionsCard";
-import BuyerQuestionsCard from "@/components/enterprise/Modules/BuyerQuestionsCard";
-import EmptyPopup from "@/components/enterprise/Popup/EmptyPopup";
+import SalesMethodologyCard from "@/components/Modules/SalesMethodologyCard";
+import BuyerJourneyCard from "@/components/Modules/BuyerJourneyCard";
+import BuyerObjectionsCard from "@/components/Modules/BuyerObjectionsCard";
+import BuyerQuestionsCard from "@/components/Modules/BuyerQuestionsCard";
+import EmptyPopup from "@/components/CommonComponents/EmptyPopup";
 
 export default function IndividualView({
   timeRange,

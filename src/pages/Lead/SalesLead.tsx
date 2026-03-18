@@ -1,14 +1,26 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/CommonComponents/PageHeader";
 import { Badge } from "@/components/ui/badge";
+import { mockAEReps, mockDeals } from "@/data/mock";
 
 export default function SalesLead() {
-  const upcoming = "Thu 10:30 AM with Sarah Lee";
+  const me = mockAEReps[0]?.name ?? "Myself";
+  const repDeals = useMemo(() => mockDeals.filter(d => d.owner_name === me), [me]);
+  const upcomingDeal = useMemo(() => {
+    const withNext = repDeals.filter(d => d.next_step && d.next_step.date);
+    withNext.sort((a, b) => (a.next_step!.date > b.next_step!.date ? 1 : -1));
+    return withNext[0] || null;
+  }, [repDeals]);
+  const upcoming = upcomingDeal
+    ? `${new Date(upcomingDeal.next_step!.date).toLocaleString()} · ${upcomingDeal.account_name}`
+    : "—";
+  const commitDeals = useMemo(() => repDeals.filter(d => d.forecast_category === "COMMIT"), [repDeals]);
+  const ebMissing = useMemo(() => repDeals.find(d => d.risk_reasons.some(r => r.code === "MISSING_EB")) || null, [repDeals]);
   const [checklist, setChecklist] = useState([
     { id: "c1", text: "Review top deal risks and blockers", done: false },
     { id: "c2", text: "Draft agenda with top 3 priorities", done: false },
-    { id: "c3", text: "Prepare voice note update on key call", done: false },
-    { id: "c4", text: "Compile proof points for decision maker", done: false },
+    { id: "c3", text: commitDeals.length ? "Confirm buyer next steps on all commit deals" : "Prepare voice note update on key call", done: false },
+    { id: "c4", text: ebMissing ? `Engage EB/sponsor for ${ebMissing.account_name}` : "Compile proof points for decision maker", done: false },
   ]);
 
   const toggle = (id: string) => {
@@ -55,11 +67,37 @@ export default function SalesLead() {
                 <Badge variant="outline" className="text-[11px]">Auto-analyzed</Badge>
               </div>
               <ul className="space-y-2 text-sm text-foreground">
-                <li>AI Score: 7.2/10</li>
-                <li>Talk:Listen: 52:48</li>
-                <li>Focus Areas: Discovery depth, Next step clarity</li>
-                <li>Strength: Clear reframes to business impact</li>
-                <li>Opportunity: Deepen exec alignment before proposing roadmap</li>
+                <li>
+                  AI Score: {(() => {
+                    const avgRisk = repDeals.length ? repDeals.reduce((s, d) => s + d.risk_score, 0) / repDeals.length : 20;
+                    return `${((100 - avgRisk) / 10).toFixed(1)}/10`;
+                  })()}
+                </li>
+                <li>Talk:Listen: 50:50</li>
+                <li>
+                  Focus Areas: {(() => {
+                    const hasDiscovery = repDeals.some(d => d.risk_reasons.some(r => r.code === "STAGE_STUCK"));
+                    const hasNextStep = repDeals.some(d => !d.next_step || !d.next_step.is_buyer_confirmed || d.risk_reasons.some(r => r.code === "NO_NEXT_STEP_DATE"));
+                    const areas = [];
+                    if (hasDiscovery) areas.push("Discovery depth");
+                    if (hasNextStep) areas.push("Next step clarity");
+                    if (!areas.length) areas.push("Value articulation");
+                    return areas.join(", ");
+                  })()}
+                </li>
+                <li>
+                  Strength: {(() => {
+                    const confirmed = repDeals.filter(d => d.next_step && d.next_step.is_buyer_confirmed).length;
+                    return confirmed ? `Buyer-confirmed next steps on ${confirmed} deals` : "Consistent progress on commit deals";
+                  })()}
+                </li>
+                <li>
+                  Opportunity: {(() => {
+                    if (repDeals.some(d => d.risk_reasons.some(r => r.code === "MISSING_EB"))) return "Deepen exec alignment";
+                    if (repDeals.some(d => d.risk_reasons.some(r => r.code === "COMMIT_AT_RISK"))) return "Stabilize commit risk in key accounts";
+                    return "Accelerate stage progression";
+                  })()}
+                </li>
               </ul>
             </div>
           </div>

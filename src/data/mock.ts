@@ -5,6 +5,7 @@ export type RiskLevel = 'RED' | 'AMBER' | 'GREEN';
 export type ForecastCategory = 'COMMIT' | 'BEST_CASE' | 'PIPELINE' | 'OMIT';
 export type DecisionType = 'ADVANCE' | 'REPLAN' | 'DOWNGRADE' | 'CLOSE_LOST' | 'NO_CHANGE';
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'BLOCKED' | 'DONE';
+export type SelfAssessmentStatus = 'PENDING' | 'SUBMITTED' | 'TODO';
 
 export interface RiskReason {
   code: RiskCode;
@@ -28,6 +29,8 @@ export interface Deal {
   stage_dwell_days: number;
   next_step: { description: string; date: string; is_buyer_confirmed: boolean } | null;
   impact_rank: number;
+  need_coaching?: boolean;
+  self_assessment_status?: SelfAssessmentStatus;
 }
 
 export interface AERep {
@@ -38,6 +41,17 @@ export interface AERep {
   hygiene_score: number;
   overdue_actions: number;
   avatar?: string;
+}
+
+export interface Call {
+  call_id: string;
+  deal_id: string;
+  rep_name: string;
+  date: string;
+  duration_min: number;
+  talk_listen: string;
+  flagged: boolean;
+  topics: string[];
 }
 
 export interface Task {
@@ -95,6 +109,7 @@ export const mockDeals: Deal[] = [
     forecast_category: 'COMMIT', close_date: dateInDays(15), risk_score: 65,
     risk_level: 'AMBER', risk_reasons: [risk('CLOSE_DATE_MOVED', 'AMBER'), risk('MISSING_EB', 'RED')],
     staleness_days: 5, stage_dwell_days: 14, next_step: { description: 'Security review call', date: dateInDays(4), is_buyer_confirmed: true }, impact_rank: 2,
+    need_coaching: true, self_assessment_status: 'SUBMITTED',
   },
   {
     deal_id: '3', deal_name: 'Cloud Migration Package', account_name: 'GlobalBank',
@@ -102,6 +117,7 @@ export const mockDeals: Deal[] = [
     forecast_category: 'BEST_CASE', close_date: dateInDays(40), risk_score: 52,
     risk_level: 'AMBER', risk_reasons: [risk('STAGE_STUCK', 'AMBER'), risk('WEAK_VALUE', 'AMBER')],
     staleness_days: 3, stage_dwell_days: 28, next_step: { description: 'Workshop with IT team', date: dateInDays(6), is_buyer_confirmed: false }, impact_rank: 3,
+    need_coaching: true, self_assessment_status: 'SUBMITTED',
   },
   {
     deal_id: '4', deal_name: 'Security Compliance Tool', account_name: 'MedHealth',
@@ -109,6 +125,7 @@ export const mockDeals: Deal[] = [
     forecast_category: 'COMMIT', close_date: dateInDays(25), risk_score: 42,
     risk_level: 'GREEN', risk_reasons: [],
     staleness_days: 1, stage_dwell_days: 7, next_step: { description: 'Procurement sign-off', date: dateInDays(8), is_buyer_confirmed: true }, impact_rank: 4,
+    need_coaching: true, self_assessment_status: 'PENDING',
   },
   {
     deal_id: '5', deal_name: 'HR Automation Platform', account_name: 'PeopleFirst',
@@ -123,6 +140,7 @@ export const mockDeals: Deal[] = [
     forecast_category: 'PIPELINE', close_date: dateInDays(47), risk_score: 38,
     risk_level: 'GREEN', risk_reasons: [risk('NO_MAP', 'AMBER')],
     staleness_days: 2, stage_dwell_days: 10, next_step: { description: 'Budget approval meeting', date: dateInDays(12), is_buyer_confirmed: true }, impact_rank: 6,
+    need_coaching: true, self_assessment_status: 'SUBMITTED',
   },
   {
     deal_id: '7', deal_name: 'Customer Success Platform', account_name: 'RetailMax',
@@ -130,6 +148,7 @@ export const mockDeals: Deal[] = [
     forecast_category: 'BEST_CASE', close_date: dateInDays(55), risk_score: 58,
     risk_level: 'AMBER', risk_reasons: [risk('SINGLE_THREADED', 'AMBER'), risk('MISSING_EB', 'AMBER')],
     staleness_days: 7, stage_dwell_days: 18, next_step: { description: 'Exec sponsor intro', date: dateInDays(14), is_buyer_confirmed: false }, impact_rank: 7,
+    need_coaching: true, self_assessment_status: 'TODO',
   },
   {
     deal_id: '8', deal_name: 'API Gateway Enterprise', account_name: 'FinServ Group',
@@ -145,6 +164,7 @@ export const mockDeals: Deal[] = [
     forecast_category: 'PIPELINE', close_date: dateInDays(28), risk_score: 40,
     risk_level: 'AMBER', risk_reasons: [risk('MISSING_EB', 'RED')],
     staleness_days: 4, stage_dwell_days: 9, next_step: null, impact_rank: 9,
+    need_coaching: true, self_assessment_status: 'SUBMITTED',
   },
   {
     deal_id: '10', deal_name: 'Support Automation', account_name: 'HelpDeskCo',
@@ -152,6 +172,7 @@ export const mockDeals: Deal[] = [
     forecast_category: 'BEST_CASE', close_date: dateInDays(42), risk_score: 33,
     risk_level: 'GREEN', risk_reasons: [],
     staleness_days: 6, stage_dwell_days: 12, next_step: { description: 'EB sign-off', date: dateInDays(10), is_buyer_confirmed: true }, impact_rank: 10,
+    need_coaching: true, self_assessment_status: 'SUBMITTED',
   },
   {
     deal_id: '11', deal_name: 'Compliance Suite', account_name: 'SecureBank',
@@ -159,6 +180,7 @@ export const mockDeals: Deal[] = [
     forecast_category: 'COMMIT', close_date: dateInDays(18), risk_score: 70,
     risk_level: 'AMBER', risk_reasons: [risk('NO_MAP', 'AMBER'), risk('SINGLE_THREADED', 'AMBER')],
     staleness_days: 3, stage_dwell_days: 17, next_step: { description: 'Legal review', date: dateInDays(5), is_buyer_confirmed: false }, impact_rank: 11,
+    need_coaching: true, self_assessment_status: 'SUBMITTED',
   },
   {
     deal_id: '12', deal_name: 'API Observability', account_name: 'DevOps Labs',
@@ -206,6 +228,13 @@ export const mockAEReps: AERep[] = [
   { user_id: '6', name: 'Taylor Brooks', commit_amount: 145000, slippage_count: 0, hygiene_score: 88, overdue_actions: 0 },
 ];
 
+export const mockCalls: Call[] = [
+  { call_id: 'c-1', deal_id: '2', rep_name: 'Marcus Johnson', date: dateInDays(-2), duration_min: 32, talk_listen: '48:52', flagged: true, topics: ['Objection handling', 'Security review'] },
+  { call_id: 'c-2', deal_id: '3', rep_name: 'Sarah Chen', date: dateInDays(-3), duration_min: 28, talk_listen: '55:45', flagged: true, topics: ['Discovery', 'Value'] },
+  { call_id: 'c-3', deal_id: '6', rep_name: 'Priya Patel', date: dateInDays(-1), duration_min: 24, talk_listen: '50:50', flagged: true, topics: ['Budget', 'Timeline'] },
+  { call_id: 'c-4', deal_id: '11', rep_name: 'Taylor Brooks', date: dateInDays(-5), duration_min: 30, talk_listen: '47:53', flagged: true, topics: ['Legal', 'Risk'] },
+  { call_id: 'c-5', deal_id: '9', rep_name: 'Jordan Kim', date: dateInDays(-10), duration_min: 22, talk_listen: '49:51', flagged: false, topics: ['EB', 'Intro'] },
+];
 export const mockTasks: Task[] = [
   { task_id: '1', title: 'Send pricing proposal to Acme', owner_name: 'Sarah Chen', deal_name: 'Enterprise Platform License', due_date: dateInDays(2), status: 'TODO', is_overdue: false },
   { task_id: '2', title: 'Schedule EB meeting for TechFlow', owner_name: 'Marcus Johnson', deal_name: 'Data Analytics Suite', due_date: dateInDays(-2), status: 'TODO', is_overdue: true },

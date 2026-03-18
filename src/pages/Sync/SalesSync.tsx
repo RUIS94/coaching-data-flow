@@ -1,14 +1,28 @@
 import { PageHeader } from "@/components/CommonComponents/PageHeader";
-import { mockAEReps } from "@/data/mock";
+import { mockAEReps, mockDeals, mockTasks, formatCurrency } from "@/data/mock";
 
 export default function SalesSync() {
   const me = mockAEReps[0]?.name ?? "Myself";
   const pulseDate = new Date().toLocaleDateString();
-
-  const commitText = "Commit: $285K across 2 deals";
-  const topRiskText = "Top Risk: Missing EB · Commit at Risk";
-  const winLearningText = "Win / Learning: Discovery depth → clearer success criteria";
-  const helpNeededText = "Help Needed: EB intro at GlobalTech; pricing guidance for Acme";
+  const repDeals = mockDeals.filter(d => d.owner_name === me);
+  const commitDeals = repDeals.filter(d => d.forecast_category === "COMMIT");
+  const commitAmt = commitDeals.reduce((s, d) => s + d.amount, 0);
+  const commitText = `Commit: ${formatCurrency(commitAmt)} across ${commitDeals.length} deals`;
+  const riskCounts: Record<string, number> = {};
+  repDeals.forEach(d => d.risk_reasons.forEach(r => {
+    const k = r.label;
+    riskCounts[k] = (riskCounts[k] || 0) + (r.severity === "RED" ? 2 : 1);
+  }));
+  const topRisks = Object.entries(riskCounts).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([label]) => label);
+  const topRiskText = topRisks.length ? `Top Risk: ${topRisks.join(" · ")}` : "Top Risk: GREEN";
+  const nextStepGaps = repDeals.filter(d => !d.next_step || !d.next_step.is_buyer_confirmed).length;
+  const winLearningText = nextStepGaps > 0 ? "Win / Learning: Discovery depth → clearer success criteria" : "Win / Learning: Buyer-confirmed next steps across key deals";
+  const ebMissing = repDeals.find(d => d.risk_reasons.some(r => r.code === "MISSING_EB"));
+  const commitAtRisk = repDeals.find(d => d.risk_reasons.some(r => r.code === "COMMIT_AT_RISK"));
+  const helpNeededText = [
+    ebMissing ? `EB intro at ${ebMissing.account_name}` : null,
+    commitAtRisk ? `Support on ${commitAtRisk.account_name}` : null,
+  ].filter(Boolean).join("; ") || "Help Needed: —";
 
   return (
     <div className="h-full bg-white overflow-auto">

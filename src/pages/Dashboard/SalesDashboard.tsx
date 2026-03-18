@@ -27,6 +27,21 @@ export default function SalesCoachingDashboard() {
   };
 
   const [reflection, setReflection] = useState("");
+  const peers = useMemo(() => mockAEReps.filter(r => r.name !== me).slice(0, 6), [me]);
+  const peerHighlights = useMemo(() => {
+    const presets = [
+      { problem: "Single-threaded risk", action: "Mapped stakeholders, engaged champion", outcome: "Secured EB intro & buyer-confirmed next step" },
+      { problem: "Missing EB access", action: "Built sponsor, crafted EB-ready narrative", outcome: "EB meeting scheduled" },
+      { problem: "Stage dwell too long", action: "Defined clear exit criteria in MAP", outcome: "Progressed stage" },
+      { problem: "Budget timing objection", action: "Framed ROI and phased plan", outcome: "Agreed path to commit" },
+      { problem: "No buyer-confirmed next step", action: "Closed with mutual action plan", outcome: "Next step confirmed" },
+      { problem: "Low stakeholder engagement", action: "Used relevant customer story", outcome: "Re-engaged decision group" },
+    ];
+    return peers.map((r, idx) => {
+      const p = presets[idx % presets.length];
+      return { id: `ph-${r.user_id}`, peer: r.name, ...p };
+    });
+  }, [peers]);
 
   return (
     <div className="h-full bg-white overflow-auto">
@@ -173,6 +188,33 @@ export default function SalesCoachingDashboard() {
                 ))}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-border bg-card">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-gray-50">
+            <div className="text-sm font-semibold text-foreground">Peers Highlights — Learn from Others</div>
+          </div>
+          <div className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {peerHighlights.map(h => (
+                <div key={h.id} className="rounded-lg border border-border bg-white p-3">
+                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{h.peer}</div>
+                  <div className="mt-1">
+                    <div className="text-xs text-muted-foreground">Problem</div>
+                    <div className="text-sm text-foreground">{h.problem}</div>
+                  </div>
+                  <div className="mt-2">
+                    <div className="text-xs text-muted-foreground">Action</div>
+                    <div className="text-sm text-foreground">{h.action}</div>
+                  </div>
+                  <div className="mt-2">
+                    <div className="text-xs text-muted-foreground">Outcome</div>
+                    <div className="text-sm text-foreground">{h.outcome}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

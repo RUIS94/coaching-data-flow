@@ -1,17 +1,55 @@
 import { PageHeader } from "@/components/CommonComponents/PageHeader";
 import { KPICard } from "@/components/CommonComponents/KPICard";
+import { mockAEReps, mockDeals, mockTasks, mockDecisions } from "@/data/mock";
 
 export default function SalesEvaluate() {
-  const myWinRate = "28%";
-  const forecastAccuracy = "±9%";
-  const actionsCompleted = "8";
-  const talkListenTrend = "52:48";
+  const me = mockAEReps[0]?.name ?? "Myself";
+  const repDeals = mockDeals.filter(d => d.owner_name === me);
+  const commitDeals = repDeals.filter(d => d.forecast_category === "COMMIT");
+  const myWinRate = repDeals.length ? `${Math.round((commitDeals.length / repDeals.length) * 100)}%` : "0%";
+  const repDecisions = mockDecisions.filter(dec => {
+    const deal = mockDeals.find(d => d.deal_name === dec.deal_name);
+    return deal && deal.owner_name === me;
+  });
+  const noChange = repDecisions.filter(d => d.decision_type === "NO_CHANGE").length;
+  const accuracy = repDecisions.length ? noChange / repDecisions.length : 0.9;
+  const forecastAccuracy = `±${Math.round((1 - accuracy) * 100)}%`;
+  const actionsCompleted = mockTasks.filter(t => t.owner_name === me && t.status === "DONE").length.toString();
+  const talkListenTrend = "50:50";
 
-  const history = [
-    { date: "Fri, Mar 6", topic: "Discovery Depth", outcome: "Applied 3 probing questions", note: "Improved qualification" },
-    { date: "Fri, Mar 13", topic: "Next Step Clarity", outcome: "Buyer-confirmed next steps", note: "Reduced slippage" },
-    { date: "Fri, Mar 20", topic: "Value Articulation", outcome: "Framed business impact", note: "Advanced GlobalTech" },
-  ];
+  const riskTopicMap: Record<string, { topic: string; outcome: string; note: (deal: typeof repDeals[number]) => string }> = {
+    STAGE_STUCK: { topic: "Discovery Depth", outcome: "Applied probing questions", note: (deal) => "Improved qualification" },
+    NO_NEXT_STEP_DATE: { topic: "Next Step Clarity", outcome: "Buyer-confirmed next steps", note: (deal) => "Reduced slippage" },
+    WEAK_VALUE: { topic: "Value Articulation", outcome: "Framed business impact", note: (deal) => `Advanced ${deal.account_name}` },
+  };
+  const history = (() => {
+    const entries: { date: string; topic: string; outcome: string; note: string }[] = [];
+    const seen: Set<string> = new Set();
+    repDeals.forEach(deal => {
+      deal.risk_reasons.forEach(r => {
+        if (riskTopicMap[r.code] && !seen.has(r.code)) {
+          seen.add(r.code);
+          const m = riskTopicMap[r.code];
+          entries.push({
+            date: new Date().toLocaleDateString(),
+            topic: m.topic,
+            outcome: m.outcome,
+            note: m.note(deal),
+          });
+        }
+      });
+    });
+    while (entries.length < 3 && repDeals.length) {
+      const deal = repDeals[entries.length % repDeals.length];
+      entries.push({
+        date: new Date().toLocaleDateString(),
+        topic: "Commit Hygiene",
+        outcome: "Stabilized forecast",
+        note: `Focused ${deal.account_name}`,
+      });
+    }
+    return entries.slice(0, 3);
+  })();
 
   return (
     <div className="h-full bg-white overflow-auto">

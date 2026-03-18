@@ -11,13 +11,12 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import MeetingIntelligence from "./pages/MeetingIntelligence";
 import MeetingList from "./pages/MeetingList/MeetingList";
-import MeetingPreparation from "./pages/MeetingPreparation/MeetingPreparation";
-import ManagerView from "./pages/ManagerDashboard/ManagerView";
+import ManagerView from "./pages/Dashboard/LeaderDashboard";
 import DealDrillDown from "./pages/DealAnalytics/DealDrillDown";
 import DealAnalytics from "./pages/DealAnalytics/DealAnalytics";
 import CoachingSession from "./pages/CoachingSession/Session";
 import { FileManager } from "./pages/FileManager";
-import ManagerPrep from "./pages/ManagerPrep/ManagerPrep";
+import ManagerPrep from "./pages/Prepare/LeaderPrep";
 import LeaderUncover from "./pages/Uncover/LeaderUncover";
 import SalesUncover from "./pages/Uncover/SalesUncover";
 import LeaderLead from "./pages/Lead/LeaderLead";
@@ -26,7 +25,9 @@ import LeaderSync from "./pages/Sync/LeaderSync";
 import SalesSync from "./pages/Sync/SalesSync";
 import LeaderEvaluate from "./pages/Evaluate/LeaderEvaluate";
 import SalesEvaluate from "./pages/Evaluate/SalesEvaluate";
-import SalesCoachingDashboard from "./pages/SalesDashboard/SalesCoachingDashboard";
+import SalesCoachingDashboard from "./pages/Dashboard/SalesDashboard";
+import SalesPrep from "./pages/Prepare/SalesPrep";
+import { mockAEReps } from "@/data/mock";
 
 const queryClient = new QueryClient();
 
@@ -65,7 +66,9 @@ const App = () => {
                   <button className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors">
                     <Mail className="w-5 h-5" />
                   </button>
-                  <span className="text-gray-700 font-medium">SAM.Coach</span>
+                  <span className="text-gray-700 font-medium">
+                    {role === "leader" ? "Sales Leader" : (mockAEReps[0]?.name ?? "Sales Rep")}
+                  </span>
                 </div>
               </div>
               <div className={`fixed left-0 top-12 ${isNavCollapsed ? "w-20" : "w-64"} h-[calc(100vh-3rem)] bg-white border-r-[0.5px] border-gray-200 flex flex-col z-10 transition-all duration-300`}>
@@ -149,7 +152,7 @@ const App = () => {
                           </Link>
                         ) : (
                           <Link
-                            to="/meeting-preparation"
+                            to="/sales-prep"
                             className={`w-full flex items-center ${isNavCollapsed ? "justify-center px-2" : "space-x-3 px-4"} py-3 rounded-lg text-left transition-colors whitespace-nowrap text-gray-700 hover:bg-gray-100`}
                           >
                             <ClipboardList className="w-5 h-5 flex-shrink-0" />
@@ -268,7 +271,7 @@ const App = () => {
                         </Link>
                       ) : (
                         <Link
-                          to="/meeting-preparation"
+                          to="/sales-prep"
                           className={`w-full flex items-center ${isNavCollapsed ? "justify-center px-2" : "space-x-3 px-4"} py-3 rounded-lg text-left transition-colors whitespace-nowrap text-gray-700 hover:bg-gray-100`}
                         >
                           <ClipboardList className="w-5 h-5 flex-shrink-0" />
@@ -368,7 +371,7 @@ const App = () => {
                   )}
                 </nav>
               </div>
-              <div className={`${isNavCollapsed ? "ml-20" : "ml-64"} mt-12 h-[calc(100vh-3rem)] overflow-hidden transition-all duration-300`}>
+              <div className={`${isNavCollapsed ? "ml-20" : "ml-64"} mt-12 h-[calc(100vh-3rem)] overflow-y-auto transition-all duration-300`}>
                 <div className="h-full">
                   <Sonner />
                   <ToastRenderer />
@@ -377,7 +380,7 @@ const App = () => {
                     <Route path="/meeting-intelligence" element={<MeetingIntelligence />} />
                     <Route path="/meeting-list" element={<MeetingList />} />
                       <Route path="/sam-drive" element={<FileManager />} />
-                    <Route path="/meeting-preparation" element={<MeetingPreparation />} />
+                    <Route path="/sales-prep" element={<SalesPrep />} />
                     <Route path="/manager-prep" element={<ManagerPrep />} />
                     <Route path="/leader-uncover" element={<LeaderUncover />} />
                     <Route path="/sales-uncover" element={<SalesUncover />} />
