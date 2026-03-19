@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Settings, Play, FileDown, AlertCircle, AlertTriangle, CheckCircle, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Settings, Play, FileDown, AlertCircle, AlertTriangle, CheckCircle, Eye, ChevronLeft, ChevronRight, Filter, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/CommonComponents/PageHeader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -17,6 +17,7 @@ import BuyerQuestionsCard from "@/components/Modules/BuyerQuestionsCard";
 import EmptyPopup from "@/components/CommonComponents/EmptyPopup";
 import IndividualView from "@/pages/ManagerDashboard/IndividualView";
 import { useToastContext } from "@/contexts/ToastContext";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 class KpiContentBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; message?: string }> {
   constructor(props: { children: React.ReactNode }) {
@@ -913,9 +914,14 @@ function ManagerViewContent() {
               <div className="text-sm font-semibold text-foreground">Top Risk Alerts</div>
               <div className="text-xs text-muted-foreground">Deals requiring coaching attention this week</div>
             </div>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-status-red/10 text-status-red">
-              {topRiskAlerts.length} alerts
-            </span>
+            <div className="flex items-center gap-2">
+              <button type="button" className="text-[#FF8E1C] hover:opacity-80">
+                <Filter className="h-4 w-4" />
+              </button>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-status-red/10 text-status-red">
+                {topRiskAlerts.length} alerts
+              </span>
+            </div>
           </div>
           <div className="rounded overflow-x-auto">
             <table className="w-full text-xs">
@@ -928,6 +934,7 @@ function ManagerViewContent() {
                   <th className="text-left px-3 py-2 font-medium" style={{ width: '22ch' }}>Risk Signal</th>
                   <th className="text-right px-3 py-2 font-medium" style={{ width: '14ch' }}>Days Stalled</th>
                   <th className="text-left px-3 py-2 font-medium" style={{ width: '10ch' }}>Priority</th>
+                  <th className="text-left px-3 py-2 font-medium" style={{ width: '10ch' }}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -953,12 +960,26 @@ function ManagerViewContent() {
                       <td className="px-3 py-2 align-top">
                         <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${prCls}`}>{pr}</span>
                       </td>
+                      <td className="px-3 py-2 align-top">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="h-8 w-8 inline-flex items-center justify-center rounded hover:bg-gray-100">
+                              <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>review</DropdownMenuItem>
+                            <DropdownMenuItem>coaching</DropdownMenuItem>
+                            <DropdownMenuItem>update request</DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
                     </tr>
                   );
                 })}
                 {topRiskAlerts.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">No risk alerts this period.</td>
+                    <td colSpan={8} className="px-4 py-6 text-center text-muted-foreground">No risk alerts this period.</td>
                   </tr>
                 )}
               </tbody>
@@ -973,9 +994,14 @@ function ManagerViewContent() {
               <div className="text-sm font-semibold text-foreground">Top Deals</div>
               <div className="text-xs text-muted-foreground">Commit + Best Case this period</div>
             </div>
-            <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#605BFF]/10 text-[#605BFF]">
-              {currentWindowDeals.filter(d => d.forecast_category === 'COMMIT' || d.forecast_category === 'BEST_CASE').length} deals
-            </span>
+            <div className="flex items-center gap-2">
+              <button type="button" className="text-[#FF8E1C] hover:opacity-80">
+                <Filter className="h-4 w-4" />
+              </button>
+              <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#605BFF]/10 text-[#605BFF]">
+                {currentWindowDeals.filter(d => d.forecast_category === 'COMMIT' || d.forecast_category === 'BEST_CASE').length} deals
+              </span>
+            </div>
           </div>
           <div className="rounded overflow-x-auto">
             {(() => {
@@ -994,6 +1020,7 @@ function ManagerViewContent() {
                       <th className="text-left px-3 py-2 font-medium" style={{ width: '16ch' }}>Stage</th>
                       <th className="text-left px-3 py-2 font-medium" style={{ width: '16ch' }}>Forecast</th>
                       <th className="text-left px-3 py-2 font-medium" style={{ width: '16ch' }}>Next Step</th>
+                      <th className="text-left px-3 py-2 font-medium" style={{ width: '10ch' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1016,11 +1043,25 @@ function ManagerViewContent() {
                             <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary/50 text-muted-foreground">No next step</span>
                           )}
                         </td>
+                        <td className="px-3 py-2 align-top">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <button className="h-8 w-8 inline-flex items-center justify-center rounded hover:bg-gray-100">
+                                <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                              </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem>review</DropdownMenuItem>
+                              <DropdownMenuItem>coaching</DropdownMenuItem>
+                              <DropdownMenuItem>update request</DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
                       </tr>
                     ))}
                     {rows.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">No top deals this period.</td>
+                        <td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">No top deals this period.</td>
                       </tr>
                     )}
                   </tbody>

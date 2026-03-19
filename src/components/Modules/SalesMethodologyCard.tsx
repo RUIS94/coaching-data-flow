@@ -3,9 +3,10 @@ import { Target, Info, Smile } from 'lucide-react';
 
 interface SalesMethodologyCardProps {
   onDataClick: (title: string, content: string, value: number) => void;
+  scoreOffset?: number;
 }
 
-const SalesMethodologyCard: React.FC<SalesMethodologyCardProps> = ({ onDataClick }) => {
+const SalesMethodologyCard: React.FC<SalesMethodologyCardProps> = ({ onDataClick, scoreOffset = 0 }) => {
   const methodologyItems = [
     { text: 'Identify issues, Implications', score: 6, value: 30, description: 'Understand the core problems, their impact, and key stakeholders involved in the decision-making process' },
     { text: 'Money and Metric', score: 4, value: 10, description: 'Determine budget availability, financial metrics, and ROI expectations for the solution' },
@@ -56,8 +57,8 @@ const SalesMethodologyCard: React.FC<SalesMethodologyCardProps> = ({ onDataClick
                 <div 
                   className="h-1 rounded-full transition-all duration-300"
                   style={{ 
-                    width: `${(item.score / 10) * 100}%`,
-                    backgroundColor: item.score < 4 ? 'red' : item.score >= 4 && item.score < 6 ? '#FF8E1C' : 'green'
+                    width: `${(Math.max(0, Math.min(10, item.score + scoreOffset)) / 10) * 100}%`,
+                    backgroundColor: (Math.max(0, Math.min(10, item.score + scoreOffset)) < 4) ? 'red' : (Math.max(0, Math.min(10, item.score + scoreOffset)) < 6 ? '#FF8E1C' : 'green')
                   }}
                 ></div>
               </div>
@@ -65,7 +66,7 @@ const SalesMethodologyCard: React.FC<SalesMethodologyCardProps> = ({ onDataClick
                 onClick={() => onDataClick('Sales Methodology', item.text, item.value)}
                 className="px-3 py-1 rounded-full text-sm font-medium hover:opacity-90 transition-opacity duration-200 flex-shrink-0"
                 style={{ 
-                  color: item.score < 4 ? 'red' : item.score >= 4 && item.score < 6 ? '#FF8E1C' : 'green'
+                  color: (Math.max(0, Math.min(10, item.score + scoreOffset)) < 4) ? 'red' : (Math.max(0, Math.min(10, item.score + scoreOffset)) < 6 ? '#FF8E1C' : 'green')
                 }}
               >
                 {item.value}

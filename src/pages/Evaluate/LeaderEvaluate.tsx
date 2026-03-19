@@ -22,8 +22,8 @@ const trackerData: TrackerRow[] = [
 export default function LeaderEvaluate() {
   const winRate = "31%";
   const forecastAccuracy = "78%";
-  const dealProgression = "24%";
-  const coachingCadence = "82%";
+  const dealProgression = "64%";
+  const coachingCadence = "100%";
 
   return (
     <div className="h-full bg-white overflow-auto">
@@ -34,10 +34,10 @@ export default function LeaderEvaluate() {
       />
       <div className="px-6 pb-6 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <KPICard label="Win Rate" value={winRate} trend="up" trendLabel="+2% WoW" trendPositive={true} />
+          <KPICard label="Win Rate" value={winRate} trend="up" trendLabel="+ 2% from prior month" trendPositive={true} />
           <KPICard label="Forecast Accuracy" value={forecastAccuracy} trend="flat" trendLabel="Stable" trendPositive={false} />
-          <KPICard label="Deal Progression" value={dealProgression} trend="up" trendLabel="+4 advanced" trendPositive={true} />
-          <KPICard label="Coaching Cadence" value={coachingCadence} trend="flat" trendLabel="On track" trendPositive={true} />
+          <KPICard label="Deal Progression" value={dealProgression} trend="down" trendLabel="- 4% from target" trendPositive={false} />
+          <KPICard label="Coaching Cadence" value={coachingCadence} trend="up" trendLabel="All reps coached this week" trendPositive={true} />
         </div>
 
         <div className="rounded-lg border border-border bg-card">

@@ -3,9 +3,10 @@ import { HelpCircle, Info, Frown } from 'lucide-react';
 
 interface BuyerQuestionsCardProps {
   onDataClick: (title: string, content: string, value: number) => void;
+  scoreOffset?: number;
 }
 
-const BuyerQuestionsCard: React.FC<BuyerQuestionsCardProps> = ({ onDataClick }) => {
+const BuyerQuestionsCard: React.FC<BuyerQuestionsCardProps> = ({ onDataClick, scoreOffset = 0 }) => {
   const questionItems = [
     { text: 'Functionality', score: 3, value: 14, description: 'Questions about features, capabilities, and how well the solution meets specific business requirements' },
     { text: 'Economics', score: 2, value: 5, description: 'Cost-benefit analysis, ROI calculations, and total cost of ownership considerations' },
@@ -55,8 +56,8 @@ const BuyerQuestionsCard: React.FC<BuyerQuestionsCardProps> = ({ onDataClick }) 
                 <div 
                   className="h-1 rounded-full transition-all duration-300"
                   style={{ 
-                    width: `${(item.score / 10) * 100}%`,
-                    backgroundColor: item.score < 4 ? 'red' : item.score >= 4 && item.score < 6 ? '#FF8E1C' : 'green'
+                    width: `${(Math.max(0, Math.min(10, item.score + scoreOffset)) / 10) * 100}%`,
+                    backgroundColor: (Math.max(0, Math.min(10, item.score + scoreOffset)) < 4) ? 'red' : (Math.max(0, Math.min(10, item.score + scoreOffset)) < 6 ? '#FF8E1C' : 'green')
                   }}
                 ></div>
               </div>
@@ -64,7 +65,7 @@ const BuyerQuestionsCard: React.FC<BuyerQuestionsCardProps> = ({ onDataClick }) 
                 onClick={() => onDataClick('Buyer Questions', item.text, item.value)}
                 className="px-3 py-1 rounded-full text-sm font-medium hover:opacity-90 transition-opacity duration-200 flex-shrink-0"
                 style={{ 
-                  color: item.score < 4 ? 'red' : item.score >= 4 && item.score < 6 ? '#FF8E1C' : 'green'
+                  color: (Math.max(0, Math.min(10, item.score + scoreOffset)) < 4) ? 'red' : (Math.max(0, Math.min(10, item.score + scoreOffset)) < 6 ? '#FF8E1C' : 'green')
                 }}
               >
                 {item.value}

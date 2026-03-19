@@ -22,21 +22,31 @@ export default function LeaderSync() {
     }
     return acc;
   }, {});
-  const riskEntries = Object.entries(riskCounts).sort((a, b) => b[1] - a[1]);
-  const topRisk = riskEntries[0] ?? null;
-  const topRiskCode = topRisk ? topRisk[0] : null;
-  const topRiskCount = topRisk ? topRisk[1] : 0;
   const prettyCode = (code: string) =>
     code
       .split("_")
       .map(s => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase())
       .join(" ");
+  const riskEntries = Object.entries(riskCounts).sort((a, b) => b[1] - a[1]);
+  const topRisk = riskEntries[0] ?? null;
+  const topRiskCode = topRisk ? topRisk[0] : null;
+  const topRiskCount = topRisk ? topRisk[1] : 0;
+  const top3RiskCodes = riskEntries.slice(0, 3).map(([code]) => prettyCode(code)).join(", ");
 
   const winsAmt = 320000;
   const winsDealCount = 3;
   const winsRepCount = 2;
+  const winCandidates = mockDeals.filter(d => d.risk_level === "GREEN");
+  const winRepNames = Array.from(new Set(winCandidates.map(d => d.owner_name))).slice(0, Math.max(1, winsRepCount)).join(", ");
 
   const helpRequestCount = mockDeals.reduce((sum, d) => sum + ((d.help_needed?.length ?? 0)), 0);
+  const helpCounts = mockDeals.reduce<Record<string, number>>((acc, d) => {
+    for (const h of d.help_needed ?? []) {
+      acc[h] = (acc[h] ?? 0) + 1;
+    }
+    return acc;
+  }, {});
+  const top2Helps = Object.entries(helpCounts).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k]) => k).join(", ");
 
   const talkingPoints = [
     "Team Commit momentum strong; reinforce EB access on red-risk deals.",
@@ -77,18 +87,18 @@ export default function LeaderSync() {
               <KPICard
                 label="Top Risks"
                 value={`${topRiskCount}`}
-                note={topRiskCode ? `${prettyCode(topRiskCode)}: ${topRiskCount}` : "—"}
+                note={top3RiskCodes || "—"}
               />
               <KPICard
                 label="Wins This Week"
                 value={formatCurrency(winsAmt)}
-                secondaryValue={`${winsDealCount} deals · ${winsRepCount} reps`}
-                note={`Wins: ${winsDealCount}`}
+                secondaryValue={`${winsDealCount} deals`}
+                note={winRepNames || "—"}
               />
               <KPICard
                 label="Help Requests"
                 value={`${helpRequestCount}`}
-                note={`Help Needed: ${helpRequestCount}`}
+                note={top2Helps || "—"}
               />
             </div>
           </div>

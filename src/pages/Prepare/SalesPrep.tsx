@@ -1,20 +1,54 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { mockDeals, mockAEReps, formatCurrency, type Deal } from '@/data/mock';
+import { PageHeader } from "@/components/CommonComponents/PageHeader";
+import SalesMethodologyCard from "@/components/Modules/SalesMethodologyCard";
+import BuyerJourneyCard from "@/components/Modules/BuyerJourneyCard";
+import BuyerObjectionsCard from "@/components/Modules/BuyerObjectionsCard";
+import BuyerQuestionsCard from "@/components/Modules/BuyerQuestionsCard";
 import { Bot, Gauge, Users, Building2, FileText, Search, Filter, CheckCircle, AlertCircle, Send, Database, ChevronDown, User as UserIcon, Edit3, Trash2, Lock } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 
 const SalesPrep: React.FC = () => {
-  const [repName, setRepName] = useState<string>(mockAEReps[0]?.name || 'Sarah Chen');
+  const [repName] = useState<string>('Sarah Chen');
   const repDeals = useMemo(() => mockDeals.filter(d => d.owner_name === repName), [repName]);
   const topDeals = useMemo(() => repDeals.slice().sort((a, b) => b.amount - a.amount).slice(0, 6), [repDeals]);
   const topRiskDeals = useMemo(() => repDeals.filter(d => d.risk_level === 'RED').slice().sort((a, b) => b.risk_score - a.risk_score).slice(0, 6), [repDeals]);
-  const strategicDeals = useMemo(() => repDeals.slice().sort((a, b) => a.impact_rank - b.impact_rank).slice(0, 6), [repDeals]);
+  const strategicDeal = useMemo(() => {
+    const green = repDeals.find(d => d.owner_name === 'Sarah Chen' && d.risk_level === 'GREEN');
+    if (green) return green;
+    const any = repDeals.find(d => d.owner_name === 'Sarah Chen');
+    return any || null;
+  }, [repDeals]);
   const requestedDeals = useMemo(() => repDeals.filter(d => d.risk_reasons.some(r => r.code === 'COMMIT_AT_RISK' || r.code === 'CLOSE_DATE_MOVED')).slice(0, 6), [repDeals]);
-  const [selectedDealIds, setSelectedDealIds] = useState<string[]>([]);
+  const [selectedDealIds, setSelectedDealIds] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem('sales_selected_deal_ids');
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [currentDealName, setCurrentDealName] = useState<string | null>(null);
   const toggleSelect = (id: string) => {
-    setSelectedDealIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    setSelectedDealIds(prev => {
+      const adding = !prev.includes(id);
+      const next = adding ? [...prev, id] : prev.filter(x => x !== id);
+      try { localStorage.setItem('sales_selected_deal_ids', JSON.stringify(next)); } catch { void 0 }
+      if (next.length === 0) {
+        setCurrentDealName(null);
+      } else {
+        const lastId = next[next.length - 1];
+        const d = repDeals.find(dd => dd.deal_id === lastId);
+        setCurrentDealName(d ? `${d.account_name} / ${d.deal_name}` : null);
+      }
+      return next;
+    });
   };
+  useEffect(() => {
+    try { localStorage.setItem('sales_selected_deal_ids', JSON.stringify(selectedDealIds)); } catch { void 0 }
+  }, [selectedDealIds]);
   const selectedDeals = useMemo<Deal[]>(() => {
-    if (selectedDealIds.length === 0) return repDeals;
+    if (selectedDealIds.length === 0) return [];
     return repDeals.filter(d => selectedDealIds.includes(d.deal_id));
   }, [repDeals, selectedDealIds]);
   const totalAmount = useMemo(() => selectedDeals.reduce((sum, d) => sum + d.amount, 0), [selectedDeals]);
@@ -26,6 +60,21 @@ const SalesPrep: React.FC = () => {
   }), [selectedDeals]);
   const buyerConfirmed = useMemo(() => selectedDeals.filter(d => d.next_step && d.next_step.is_buyer_confirmed).length, [selectedDeals]);
   const avgDwell = useMemo(() => selectedDeals.length ? Math.round(selectedDeals.reduce((s, d) => s + d.stage_dwell_days, 0) / selectedDeals.length) : 0, [selectedDeals]);
+  const scoreOffset = useMemo(() => {
+    if (selectedDeals.length === 0) return 0;
+    const n = Math.max(-2, Math.min(2, Math.round((50 - avgRisk) / 20)));
+    return n;
+  }, [selectedDeals.length, avgRisk]);
+  const [analyticsDetail, setAnalyticsDetail] = useState<{ title: string; content: string; value: number } | null>(null);
+  const onModuleDataClick = (title: string, content: string, value: number) => {
+    setAnalyticsDetail({ title, content, value });
+  };
+  const clearSelection = () => {
+    setSelectedDealIds([]);
+    setCurrentDealName(null);
+    setAnalyticsDetail(null);
+    try { localStorage.setItem('sales_selected_deal_ids', JSON.stringify([])); } catch { void 0 }
+  };
   const predefinedQuestions = [
     'Where are the biggest risks across selected deals?',
     'Which deals need buyer-confirmed next step?',
@@ -132,17 +181,21 @@ const SalesPrep: React.FC = () => {
     </label>
   );
   return (
-    <div className="bg-white p-3 h-[calc(100vh-4rem)]">
+    <div className="h-full bg-white overflow-auto">
+      <PageHeader
+        title="P — Prepare"
+        subtitle="Triage, self-assessment & prioritization — ~30 min Monday morning"
+        titleClassName="text-2xl font-bold text-gray-900"
+      />
+      <div className="px-6 pb-6">
       <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
         <div className="lg:col-span-4 bg-white rounded-2xl border border-gray-100 p-4">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="text-lg font-bold text-gray-900">Deals</div>
-              <Filter size={16} className="text-gray-400" />
+              <span className="ml-2 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#605BFF]/10 text-[#605BFF]">Selected: {selectedDeals.length}</span>
+              <span className="ml-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-100 text-gray-700">Amount: {formatCurrency(totalAmount)}</span>
             </div>
-            <select value={repName} onChange={(e) => setRepName(e.target.value)} className="px-2 py-1 text-sm border rounded">
-              {mockAEReps.map(r => <option key={r.user_id} value={r.name}>{r.name}</option>)}
-            </select>
           </div>
           <div className="space-y-4">
             <div>
@@ -155,7 +208,13 @@ const SalesPrep: React.FC = () => {
             </div>
             <div>
               <div className="text-xs font-semibold text-gray-700 mb-2">Strategic Deals</div>
-              <div className="space-y-2">{strategicDeals.map(d => <DealCard key={d.deal_id} d={d} />)}</div>
+              <div className="space-y-2">
+                {strategicDeal ? (
+                  <DealCard key={strategicDeal.deal_id} d={strategicDeal} />
+                ) : (
+                  <div className="text-[11px] text-gray-500">No strategic deal</div>
+                )}
+              </div>
             </div>
             <div>
               <div className="text-xs font-semibold text-gray-700 mb-2">Requested/Nominated (Manager)</div>
@@ -166,52 +225,38 @@ const SalesPrep: React.FC = () => {
         </div>
         <div className="lg:col-span-6 bg-white rounded-2xl border border-gray-100 p-4">
           <div className="flex items-center justify-between mb-4">
-            <div className="text-lg font-bold text-gray-900">Meeting Analytics</div>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-            <div className="rounded-xl border p-3 flex items-center gap-3">
-              <FileText size={16} className="text-[#605BFF]" />
-              <div>
-                <div className="text-[11px] text-gray-600">Selected</div>
-                <div className="font-semibold text-gray-900 text-sm">{selectedDeals.length}</div>
-              </div>
+            <div className="flex items-center gap-2">
+              <div className="text-lg font-bold text-gray-900">Meeting Analytics{currentDealName ? ` — ${currentDealName}` : ''}</div>
             </div>
-            <div className="rounded-xl border p-3 flex items-center gap-3">
-              <Building2 size={16} className="text-[#605BFF]" />
-              <div>
-                <div className="text-[11px] text-gray-600">Amount</div>
-                <div className="font-semibold text-gray-900 text-sm">{formatCurrency(totalAmount)}</div>
-              </div>
-            </div>
-            <div className="rounded-xl border p-3 flex items-center gap-3">
-              <Gauge size={16} className="text-[#605BFF]" />
-              <div>
-                <div className="text-[11px] text-gray-600">Avg Risk</div>
-                <div className="font-semibold text-gray-900 text-sm">{avgRisk}</div>
-              </div>
-            </div>
-            <div className="rounded-xl border p-3 flex items-center gap-3">
-              <AlertCircle size={16} className="text-red-600" />
-              <div>
-                <div className="text-[11px] text-gray-600">RED/AMBER</div>
-                <div className="font-semibold text-gray-900 text-sm">{riskCount.RED}/{riskCount.AMBER}</div>
-              </div>
-            </div>
-            <div className="rounded-xl border p-3 flex items-center gap-3">
-              <CheckCircle size={16} className="text-green-600" />
-              <div>
-                <div className="text-[11px] text-gray-600">Buyer-confirmed</div>
-                <div className="font-semibold text-gray-900 text-sm">{buyerConfirmed}</div>
-              </div>
-            </div>
-            <div className="rounded-xl border p-3 flex items-center gap-3">
-              <Users size={16} className="text-[#605BFF]" />
-              <div>
-                <div className="text-[11px] text-gray-600">Avg Dwell</div>
-                <div className="font-semibold text-gray-900 text-sm">{avgDwell}d</div>
-              </div>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled={selectedDeals.length === 0} onClick={clearSelection}>Clear</Button>
             </div>
           </div>
+          {selectedDeals.length === 0 ? (
+            <div className="mb-6 rounded-2xl border border-dashed border-gray-200 bg-gray-50 h-56 flex flex-col items-center justify-center text-gray-500">
+              <div className="text-sm font-medium">Select a deal on the left to view Meeting Analytics</div>
+              <div className="text-xs mt-1">Then click any card to view details</div>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <SalesMethodologyCard onDataClick={onModuleDataClick} scoreOffset={scoreOffset} />
+                <BuyerJourneyCard onDataClick={onModuleDataClick} scoreOffset={scoreOffset} />
+                <BuyerObjectionsCard onDataClick={onModuleDataClick} scoreOffset={scoreOffset} />
+                <BuyerQuestionsCard onDataClick={onModuleDataClick} scoreOffset={scoreOffset} />
+              </div>
+              {analyticsDetail && (
+                <div className="mb-6 rounded-2xl border border-gray-100 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm font-semibold text-gray-900">{analyticsDetail.title}</div>
+                    <Button variant="ghost" size="sm" onClick={() => setAnalyticsDetail(null)}>Clear detail</Button>
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">{analyticsDetail.content}</div>
+                  <div className="text-[11px] text-gray-500 mt-2">Score: {analyticsDetail.value}</div>
+                </div>
+              )}
+            </>
+          )}
           <div className="rounded-2xl border border-gray-100">
             <div className="flex items-center justify-between px-4 py-3">
               <div className="flex items-center gap-2">
@@ -268,145 +313,9 @@ const SalesPrep: React.FC = () => {
               </div>
             </div>
           </div>
-          <div className="rounded-2xl border border-gray-100 mt-4">
-            <div className="px-4 py-3">
-              <div className="text-lg font-bold text-gray-900">Predefined Coaching Questions</div>
-            </div>
-            <div className="px-4 pb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="rounded-xl border p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-sm font-semibold text-gray-900">Manager Questions</div>
-                </div>
-                <div className="space-y-3 max-h-56 overflow-y-auto">
-                  {managerQuestions.map((q) => (
-                    <div key={q.id} className="rounded border p-3">
-                      <div className="flex items-center justify-between">
-                        <div className="text-xs font-semibold text-gray-700">{q.question}</div>
-                        <Lock size={14} className="text-gray-400" />
-                      </div>
-                      <textarea
-                        value={q.answer}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setManagerQuestions(prev => prev.map(x => x.id === q.id ? { ...x, answer: v } : x));
-                        }}
-                        className="w-full h-20 text-sm border rounded mt-2 p-2"
-                        placeholder="Type your answer"
-                      />
-                      <div className="flex justify-end mt-2">
-                        <button
-                          onClick={() => {
-                            const a = generateAnswerForQuestion(q.question);
-                            setManagerQuestions(prev => prev.map(x => x.id === q.id ? { ...x, answer: a } : x));
-                          }}
-                          className="px-2 py-1 text-xs border rounded text-gray-700 hover:bg-gray-50 flex items-center gap-1"
-                        >
-                          <Bot size={14} />
-                          Generate
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="rounded-xl border p-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-sm font-semibold text-gray-900">AI Suggested</div>
-                  <div className="relative">
-                    <button className="flex items-center space-x-1 px-2 py-1 text-xs bg-white hover:bg-gray-100 rounded">
-                      <ChevronDown className="w-3 h-3" />
-                      <span>{selectedMethodology}</span>
-                    </button>
-                    <div className="absolute right-0 mt-1 bg-white border rounded shadow z-10 min-w-[160px]">
-                      {methodologies.map(m => (
-                        <button
-                          key={m}
-                          onClick={() => setSelectedMethodology(m)}
-                          className={`w-full px-3 py-2 text-left text-sm ${selectedMethodology === m ? 'text-[#605BFF] bg-blue-50' : 'text-gray-700 hover:bg-gray-50'}`}
-                        >
-                          {m}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div className="relative mb-3">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    value={questionSearch}
-                    onChange={(e) => setQuestionSearch(e.target.value)}
-                    placeholder="Enter keywords"
-                    className="w-full pl-9 pr-4 py-2 text-sm border rounded"
-                  />
-                </div>
-                <div className="space-y-2 max-h-28 overflow-y-auto">
-                  {filteredQuestions.map((q, i) => (
-                    <div key={i} className="flex items-center justify-between rounded border p-2">
-                      <div className="text-xs text-gray-700">{q}</div>
-                      <button
-                        onClick={() => addBankQuestionToAI(q)}
-                        className="px-2 py-1 text-[11px] border rounded hover:bg-gray-50"
-                      >
-                        Add
-                      </button>
-                    </div>
-                  ))}
-                  {filteredQuestions.length === 0 && (
-                    <div className="text-center py-2 text-gray-500 text-sm">No questions</div>
-                  )}
-                </div>
-                <div className="space-y-3 mt-3 max-h-40 overflow-y-auto">
-                  {aiQuestions.map((q) => (
-                    <div key={q.id} className="rounded border p-3">
-                      <div className="flex items-center justify-between">
-                        <input
-                          value={q.question}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            setAiQuestions(prev => prev.map(x => x.id === q.id ? { ...x, question: v } : x));
-                          }}
-                          className="flex-1 text-xs font-semibold text-gray-700 border rounded px-2 py-1 mr-2"
-                        />
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => setAiQuestions(prev => prev.filter(x => x.id !== q.id))}
-                            className="p-1 text-gray-500 hover:text-red-600"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                      <textarea
-                        value={q.answer}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          setAiQuestions(prev => prev.map(x => x.id === q.id ? { ...x, answer: v } : x));
-                        }}
-                        className="w-full h-20 text-sm border rounded mt-2 p-2"
-                        placeholder="Type your answer"
-                      />
-                      <div className="flex justify-end mt-2">
-                        <button
-                          onClick={() => {
-                            const a = generateAnswerForQuestion(q.question);
-                            setAiQuestions(prev => prev.map(x => x.id === q.id ? { ...x, answer: a } : x));
-                          }}
-                          className="px-2 py-1 text-xs border rounded text-gray-700 hover:bg-gray-50 flex items-center gap-1"
-                        >
-                          <Bot size={14} />
-                          Generate
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  {aiQuestions.length === 0 && (
-                    <div className="text-center py-2 text-gray-500 text-sm">No AI questions</div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+          
         </div>
+      </div>
       </div>
     </div>
   );

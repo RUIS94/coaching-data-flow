@@ -226,6 +226,13 @@ export const mockDeals: Deal[] = [
     risk_level: 'GREEN', risk_reasons: [],
     staleness_days: 5, stage_dwell_days: 12, next_step: { description: 'EB briefing', date: dateInDays(9), is_buyer_confirmed: true }, impact_rank: 16,
   },
+  {
+    deal_id: '17', deal_name: 'Data Platform Expansion', account_name: 'Northstar Logistics',
+    owner_name: 'Sarah Chen', amount: 150000, stage_name: 'Validation',
+    forecast_category: 'PIPELINE', close_date: dateInDays(38), risk_score: 30,
+    risk_level: 'GREEN', risk_reasons: [],
+    staleness_days: 2, stage_dwell_days: 9, next_step: { description: 'Executive demo sign-off', date: dateInDays(11), is_buyer_confirmed: true }, impact_rank: 17,
+  },
 ];
 
 export const mockAEReps: AERep[] = [

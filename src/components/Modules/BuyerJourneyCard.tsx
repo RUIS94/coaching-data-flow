@@ -3,9 +3,10 @@ import { Map, Info, Frown } from 'lucide-react';
 
 interface BuyerJourneyCardProps {
   onDataClick: (title: string, content: string, value: number) => void;
+  scoreOffset?: number;
 }
 
-const BuyerJourneyCard: React.FC<BuyerJourneyCardProps> = ({ onDataClick }) => {
+const BuyerJourneyCard: React.FC<BuyerJourneyCardProps> = ({ onDataClick, scoreOffset = 0 }) => {
   const journeyItems = [
     { text: 'Need, Now', score: 5, value: 6, description: 'Identify immediate business needs and urgency factors driving the purchase decision' },
     { text: 'Exchange, Eliminate, Eradicate', score: 1, value: 5, description: 'Understand what current processes or solutions will be replaced or improved' },
@@ -55,8 +56,8 @@ const BuyerJourneyCard: React.FC<BuyerJourneyCardProps> = ({ onDataClick }) => {
                 <div 
                   className="h-1 rounded-full transition-all duration-300"
                   style={{ 
-                    width: `${(item.score / 10) * 100}%`,
-                    backgroundColor: item.score < 4 ? 'red' : item.score >= 4 && item.score < 6 ? '#FF8E1C' : 'green'
+                    width: `${(Math.max(0, Math.min(10, item.score + scoreOffset)) / 10) * 100}%`,
+                    backgroundColor: (Math.max(0, Math.min(10, item.score + scoreOffset)) < 4) ? 'red' : (Math.max(0, Math.min(10, item.score + scoreOffset)) < 6 ? '#FF8E1C' : 'green')
                   }}
                 ></div>
               </div>
@@ -64,7 +65,7 @@ const BuyerJourneyCard: React.FC<BuyerJourneyCardProps> = ({ onDataClick }) => {
                 onClick={() => onDataClick('Buyer Journey', item.text, item.value)}
                 className="px-3 py-1 rounded-full text-sm font-medium hover:opacity-90 transition-opacity duration-200 flex-shrink-0"
                 style={{ 
-                  color: item.score < 4 ? 'red' : item.score >= 4 && item.score < 6 ? '#FF8E1C' : 'green'
+                  color: (Math.max(0, Math.min(10, item.score + scoreOffset)) < 4) ? 'red' : (Math.max(0, Math.min(10, item.score + scoreOffset)) < 6 ? '#FF8E1C' : 'green')
                 }}
               >
                 {item.value}

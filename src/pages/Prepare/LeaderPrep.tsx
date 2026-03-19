@@ -34,6 +34,31 @@ export default function ManagerPrep() {
     if (!risky || risky.risk_reasons.length === 0) return "—";
     return risky.risk_reasons[0].label;
   };
+  const riskCodeFor = (repName: string) => {
+    const deals = mockDeals.filter(d => d.owner_name === repName);
+    const risky = deals.find(d => d.risk_reasons && d.risk_reasons.length > 0);
+    if (!risky || risky.risk_reasons.length === 0) return "—";
+    return risky.risk_reasons[0].code;
+  };
+  const prettyForecast = (fc?: string | null) =>
+    fc === "BEST_CASE" ? "Best Case" : fc === "COMMIT" ? "Commit" : fc === "PIPELINE" ? "Pipeline" : fc === "OMIT" ? "Omit" : fc ?? "—";
+  const forecastTagClass = (fc?: string | null) =>
+    fc === "COMMIT" ? "bg-status-green/10 text-status-green" :
+    fc === "BEST_CASE" ? "bg-[#605BFF]/10 text-[#605BFF]" :
+    fc === "PIPELINE" ? "bg-secondary/50 text-muted-foreground" :
+    "bg-muted/50 text-muted-foreground";
+  const prettyRiskCode = (code?: string | null) => {
+    if (!code) return "—";
+    const s = String(code).toLowerCase().replace(/_/g, " ");
+    return s.replace(/\b\w/g, ch => ch.toUpperCase());
+  };
+  const formatCloseDate = (iso?: string | null) => {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "—";
+    const month = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()];
+    return `${month} ${d.getDate()}, ${d.getFullYear()}`;
+  };
   const helpNeededTagsFor = (repName: string) => {
     const deals = mockDeals.filter(d => d.owner_name === repName);
     const tags = deals.flatMap(d => Array.isArray(d.help_needed) ? d.help_needed : []);
@@ -239,68 +264,183 @@ export default function ManagerPrep() {
                   <thead>
                     <tr className="border-b border-border text-muted-foreground bg-secondary/40">
                       <th className="text-left px-4 py-2 font-medium">Rep</th>
-                      <th className="text-left px-3 py-2 font-medium">Top Deal</th>
-                      <th className="text-left px-3 py-2 font-medium">Biggest Risk</th>
+                    <th className="text-left px-3 py-2 font-medium">Deal</th>
+                    <th className="text-left px-3 py-2 font-medium">Close Date</th>
+                    <th className="text-left px-3 py-2 font-medium">Risk</th>
                       <th className="text-left px-3 py-2 font-medium">Help Needed</th>
-                      <th className="text-left px-3 py-2 font-medium">Commit</th>
+                    <th className="text-left px-3 py-2 font-medium">Forecast Category</th>
                       <th className="text-left px-3 py-2 font-medium">Confidence</th>
                       <th className="text-left px-3 py-2 font-medium">Status</th>
-                      <th className="text-left px-3 py-2 font-medium"></th>
+                    <th className="text-left px-3 py-2 font-medium">Action</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {reps.map((rep) => {
-                      const top = getTopDealFor(rep.name);
-                      const risk = riskLabelFor(rep.name);
-                      const helpTags = helpNeededTagsFor(rep.name);
-                      const eligible = repEligible(rep.name);
-                      const hasPending = repHasPending(rep.name);
-                      const fullySubmitted = repFullySubmitted(rep.name);
-                      return (
-                        <tr key={rep.user_id} className="border-t border-border hover:bg-gray-50 transition-colors">
-                          <td className="py-3 px-4">
-                            <span className="font-semibold text-gray-900">{rep.name}</span>
-                          </td>
-                          {eligible ? (
-                            hasPending ? (
-                            <>
-                              <td className="py-3 px-4 italic text-muted-foreground" colSpan={5}>
-                                Not yet submitted — auto-nudge sent 15 min ago
-                              </td>
+                  {reps.map((rep) => {
+                    const top = getTopDealFor(rep.name);
+                    const helpTags = helpNeededTagsFor(rep.name);
+                    const eligible = repEligible(rep.name);
+                    const hasPending = repHasPending(rep.name);
+                    const fullySubmitted = repFullySubmitted(rep.name);
+                    const coachingDealsAll = mockDeals.filter(d => d.owner_name === rep.name && d.need_coaching);
+                    const primaryDeal = coachingDealsAll[0] || top || null;
+                    const coachingDeals = coachingDealsAll.slice(coachingDealsAll.length > 0 ? 1 : 0, 3);
+                    return (
+                        <>
+                          <tr key={rep.user_id} className="border-t border-border hover:bg-gray-50 transition-colors">
+                            <td className="py-3 px-4">
+                              <span className="font-semibold text-gray-900">{rep.name}</span>
+                            </td>
+                            {eligible ? (
+                              hasPending ? (
+                              <>
+                              <td className="py-3 px-4 italic text-muted-foreground" colSpan={6}>
+                                  Not yet submitted — auto-nudge sent 15 min ago
+                                </td>
+                                <td className="py-3 px-4">
+                                  <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary/50 text-muted-foreground">Pending</span>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <button className="p-1 rounded hover:bg-gray-100">
+                                        <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => { setModulesRep(rep.name); setModulesOpen(true); }}>Review</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => openNudge(rep.name)}>Nudge remaining</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </td>
+                              </>
+                              ) : fullySubmitted ? (
+                              <>
                               <td className="py-3 px-4">
-                                <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary/50 text-muted-foreground">Pending</span>
+                                {primaryDeal ? (
+                                  <div>
+                                    <div className="text-foreground">{primaryDeal.account_name} - {primaryDeal.deal_name}</div>
+                                    <div className="text-[11px] text-muted-foreground">{formatCurrency(primaryDeal.amount)} · {primaryDeal.stage_name}</div>
+                                  </div>
+                                ) : '—'}
                               </td>
+                              <td className="py-3 px-4">{formatCloseDate(primaryDeal?.close_date ?? null)}</td>
                               <td className="py-3 px-4">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <button className="p-1 rounded hover:bg-gray-100">
-                                      <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                                    </button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => { setModulesRep(rep.name); setModulesOpen(true); }}>Review</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => openNudge(rep.name)}>Nudge remaining</DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                {primaryDeal && Array.isArray(primaryDeal.risk_reasons) && primaryDeal.risk_reasons.length > 0
+                                  ? prettyRiskCode(primaryDeal.risk_reasons[0].code)
+                                  : '—'}
                               </td>
-                            </>
-                            ) : fullySubmitted ? (
-                            <>
-                              <td className="py-3 px-4">{top ? `${top.account_name} (${formatCurrency(top.amount)})` : '—'}</td>
-                              <td className="py-3 px-4">{risk}</td>
+                                <td className="py-3 px-4">
+                                  <div className="flex flex-wrap gap-1">
+                                    {helpTags.length > 0 ? helpTags.map((t) => (
+                                      <span key={t} className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#605BFF]/10 text-[#605BFF]">{t}</span>
+                                    )) : <span className="text-muted-foreground text-xs">—</span>}
+                                  </div>
+                                </td>
                               <td className="py-3 px-4">
+                                {primaryDeal ? (
+                                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${forecastTagClass(primaryDeal.forecast_category)}`}>
+                                    {prettyForecast(primaryDeal.forecast_category)}
+                                  </span>
+                                ) : '—'}
+                              </td>
+                                <td className="py-3 px-4">{confidenceFor(rep.hygiene_score)}</td>
+                                <td className="py-3 px-4">
+                                  <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-status-green/10 text-status-green">Submitted</span>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <button className="p-1 rounded hover:bg-gray-100">
+                                        <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => { setModulesRep(rep.name); setModulesOpen(true); }}>Review</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => openNudge(rep.name)}>Update Request</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </td>
+                              </>
+                              ) : (
+                              <>
+                              <td className="py-3 px-4 italic text-muted-foreground" colSpan={6}>
+                                  Pending self-assessment — awaiting submission
+                                </td>
+                                <td className="py-3 px-4">
+                                  <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary/50 text-muted-foreground">Pending</span>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <button className="p-1 rounded hover:bg-gray-100">
+                                        <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => { setModulesRep(rep.name); setModulesOpen(true); }}>Review</DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => openNudge(rep.name)}>Nudge remaining</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </td>
+                              </>
+                              )
+                            ) : (
+                              <>
+                              <td className="py-3 px-4 italic text-muted-foreground" colSpan={6}>
+                                  No self-assessment requested this period
+                                </td>
+                                <td className="py-3 px-4">
+                                  <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-muted/50 text-muted-foreground">—</span>
+                                </td>
+                                <td className="py-3 px-4">
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <button className="p-1 rounded hover:bg-gray-100">
+                                        <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuItem onClick={() => navigate("/leader-lead")}>Review</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </td>
+                              </>
+                            )}
+                          </tr>
+                          {coachingDeals.map(cd => (
+                            <tr key={`${rep.user_id}-${cd.deal_id}`} className="border-t border-border bg-secondary/20">
+                              <td className="py-2 px-4"></td>
+                              <td className="py-2 px-4">
+                              <div className="text-foreground">{cd.account_name} - {cd.deal_name}</div>
+                                <div className="text-[11px] text-muted-foreground">{formatCurrency(cd.amount)} · {cd.stage_name}</div>
+                              </td>
+                            <td className="py-2 px-4">{formatCloseDate(cd.close_date)}</td>
+                              <td className="py-2 px-4">
+                              {Array.isArray(cd.risk_reasons) && cd.risk_reasons.length > 0 ? prettyRiskCode(cd.risk_reasons[0].code) : '—'}
+                              </td>
+                              <td className="py-2 px-4">
                                 <div className="flex flex-wrap gap-1">
-                                  {helpTags.length > 0 ? helpTags.map((t) => (
-                                    <span key={t} className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#605BFF]/10 text-[#605BFF]">{t}</span>
-                                  )) : <span className="text-muted-foreground text-xs">—</span>}
+                                  {Array.isArray(cd.help_needed) && cd.help_needed.length > 0
+                                    ? cd.help_needed.slice(0, 3).map(t => (
+                                        <span key={t} className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#605BFF]/10 text-[#605BFF]">{t}</span>
+                                      ))
+                                    : <span className="text-muted-foreground text-xs">—</span>}
                                 </div>
                               </td>
-                              <td className="py-3 px-4">{formatCurrency(rep.commit_amount)}</td>
-                              <td className="py-3 px-4">{confidenceFor(rep.hygiene_score)}</td>
-                              <td className="py-3 px-4">
-                                <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-status-green/10 text-status-green">Submitted</span>
+                              <td className="py-2 px-4">
+                              <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${forecastTagClass(cd.forecast_category)}`}>{prettyForecast(cd.forecast_category)}</span>
                               </td>
-                              <td className="py-3 px-4">
+                              <td className="py-2 px-4">—</td>
+                              <td className="py-2 px-4">
+                              {cd.self_assessment_status === 'SUBMITTED' ? (
+                                <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-status-green/10 text-status-green">Submitted</span>
+                              ) : (cd.self_assessment_status === 'PENDING' || cd.self_assessment_status === 'TODO') ? (
+                                <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary/50 text-muted-foreground">Pending</span>
+                              ) : (
+                                <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary/50 text-muted-foreground">—</span>
+                              )}
+                              </td>
+                              <td className="py-2 px-4">
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <button className="p-1 rounded hover:bg-gray-100">
@@ -309,57 +449,14 @@ export default function ManagerPrep() {
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
                                     <DropdownMenuItem onClick={() => { setModulesRep(rep.name); setModulesOpen(true); }}>Review</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => openNudge(rep.name)}>Coaching</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => openNudge(rep.name)}>Update Request</DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
                               </td>
-                            </>
-                            ) : (
-                            <>
-                              <td className="py-3 px-4 italic text-muted-foreground" colSpan={5}>
-                                Pending self-assessment — awaiting submission
-                              </td>
-                              <td className="py-3 px-4">
-                                <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary/50 text-muted-foreground">Pending</span>
-                              </td>
-                              <td className="py-3 px-4">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <button className="p-1 rounded hover:bg-gray-100">
-                                      <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                                    </button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => { setModulesRep(rep.name); setModulesOpen(true); }}>Review</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => openNudge(rep.name)}>Nudge remaining</DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </td>
-                            </>
-                            )
-                          ) : (
-                            <>
-                              <td className="py-3 px-4 italic text-muted-foreground" colSpan={5}>
-                                No self-assessment requested this period
-                              </td>
-                              <td className="py-3 px-4">
-                                <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-muted/50 text-muted-foreground">—</span>
-                              </td>
-                              <td className="py-3 px-4">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <button className="p-1 rounded hover:bg-gray-100">
-                                      <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                                    </button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => navigate("/leader-lead")}>Review</DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </td>
-                            </>
-                          )}
-                        </tr>
+                            </tr>
+                          ))}
+                        </>
                       );
                     })}
                   </tbody>
