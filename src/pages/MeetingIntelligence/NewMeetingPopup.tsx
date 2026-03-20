@@ -37,7 +37,6 @@ const NewMeetingPopup: React.FC<NewMeetingPopupProps> = ({
   };
 
   const handleSave = () => {
-    console.log('Saving meeting:', formData);
     onClose();
   };
 

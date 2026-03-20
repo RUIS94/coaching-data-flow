@@ -496,7 +496,6 @@ const AskSamTab: React.FC = () => {
               onClick={(e) => {
                 e.stopPropagation();
                 // Handle mic functionality here
-                console.log('Mic clicked');
               }}
               className="absolute right-12 bottom-3 p-2 text-[#FF8E1C]"
             >

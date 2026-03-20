@@ -65,9 +65,9 @@ const MeetingList: React.FC<MeetingListProps> = ({ onNavigate }) => {
   const handleCloseQuickMeetingPopup = () => {
     setIsQuickMeetingPopupOpen(false);
   };
-  const handleJoinMeeting = () => console.log('Joining meeting with link:', currentMeetingLink);
-  const handlePrepareMeeting = () => console.log('Preparing meeting...');
-  const handleDeleteMeeting = () => console.log('Deleting meeting...');
+  const handleJoinMeeting = () => {};
+  const handlePrepareMeeting = () => {};
+  const handleDeleteMeeting = () => {};
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -280,10 +280,7 @@ const MeetingList: React.FC<MeetingListProps> = ({ onNavigate }) => {
                   <div className="py-2">
                     <button 
                       onClick={() => {
-                        console.log('Google Calendar 按钮被点击');
-                        console.log('准备调用showSuccess...');
-                        const toastId = showSuccess('We have successfully imported your Google Meetings for the current view of the calendar.');
-                        console.log('showSuccess调用完成，返回ID:', toastId);
+                        showSuccess('We have successfully imported your Google Meetings for the current view of the calendar.');
                         setShowImportMenu(false);
                       }}
                       className="w-full text-left px-4 py-2 hover:bg-gray-50 transition-colors text-gray-700"
@@ -292,7 +289,6 @@ const MeetingList: React.FC<MeetingListProps> = ({ onNavigate }) => {
                     </button>
                     <button 
                       onClick={() => {
-                        console.log('Outlook Calendar 按钮被点击');
                         showSuccess('We have successfully imported your Outlook Meetings for the current view of the calendar.');
                         setShowImportMenu(false);
                       }}
@@ -302,7 +298,6 @@ const MeetingList: React.FC<MeetingListProps> = ({ onNavigate }) => {
                     </button>
                     <button 
                       onClick={() => {
-                        console.log('Zoom Calendar 按钮被点击');
                         showSuccess('We have successfully imported your Zoom Meetings for the current view of the calendar.');
                         setShowImportMenu(false);
                       }}

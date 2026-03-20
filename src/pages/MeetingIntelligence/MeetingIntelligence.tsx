@@ -209,11 +209,9 @@ const MeetingIntelligence: React.FC<MeetingIntelligenceProps> = ({ onNavigate, o
         isVisible={showMeetingInfo}
         onClose={() => setShowMeetingInfo(false)}
         onChooseExisting={() => {
-          console.log('Choose existing meeting');
           setShowMeetingInfo(false);
         }}
         onCreateNew={() => {
-          console.log('Create new meeting');
           setShowMeetingInfo(false);
         }}
       />

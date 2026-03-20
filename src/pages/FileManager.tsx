@@ -170,8 +170,6 @@ export function FileManager() {
   };
 
   const handleCreateFolder = (parentId?: string, isTeamFolder = false, isDealFolder = false) => {
-    console.log('handleCreateFolder called with:', { parentId, isTeamFolder, isDealFolder, currentFolderId, currentCategory });
-    
     const newFolder: FileItem = {
       id: generateId(),
       name: 'New Folder',
@@ -187,18 +185,11 @@ export function FileManager() {
       teamId: currentTeam?.id,
       dealId: currentDeal?.id
     };
-    
-    console.log('Creating new folder:', newFolder);
-    
     setFiles(prev => {
       const updated = [...prev, newFolder];
-      console.log('Updated files array:', updated);
       return updated;
     });
-    
     showSuccess(`"${newFolder.name}" has been created successfully.`);
-    
-    console.log('Toast notification sent');
   };
 
   const handleItemDelete = (id: string) => {

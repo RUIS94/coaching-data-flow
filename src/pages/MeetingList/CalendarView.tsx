@@ -76,7 +76,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ meetings, viewType, current
 
   const renderDayView = () => {
     const filteredMeetings = getFilteredMeetings();
-    console.log('Day view filtered meetings:', filteredMeetings);
     const halfHours = Array.from({ length: 48 }, (_, i) => i * 0.5);
 
     return (
@@ -154,7 +153,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ meetings, viewType, current
 
   const renderWeekView = () => {
     const filteredMeetings = getFilteredMeetings();
-    console.log('Week view filtered meetings:', filteredMeetings);
     const weekStart = new Date(currentDate);
     weekStart.setDate(currentDate.getDate() - currentDate.getDay());
     
@@ -292,7 +290,6 @@ const CalendarView: React.FC<CalendarViewProps> = ({ meetings, viewType, current
 
   const renderMonthView = () => {
     const filteredMeetings = getFilteredMeetings();
-    console.log('Month view filtered meetings:', filteredMeetings);
     const monthStart = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
     const monthEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
     const startDate = new Date(monthStart);
@@ -410,10 +407,10 @@ const CalendarView: React.FC<CalendarViewProps> = ({ meetings, viewType, current
             deal: selectedMeeting.deal,
             attendees: selectedMeeting.attendees
           }}
-          onJoinMeeting={() => console.log('Joining meeting:', selectedMeeting.id)}
-          onReviewMeeting={() => console.log('Reviewing meeting:', selectedMeeting.id)}
-          onPrepareMeeting={() => console.log('Preparing meeting:', selectedMeeting.id)}
-          onDeleteMeeting={() => console.log('Deleting meeting:', selectedMeeting.id)}
+          onJoinMeeting={() => {}}
+          onReviewMeeting={() => {}}
+          onPrepareMeeting={() => {}}
+          onDeleteMeeting={() => {}}
         />
       )}
     </div>

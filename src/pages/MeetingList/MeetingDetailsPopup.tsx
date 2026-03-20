@@ -295,7 +295,6 @@ const MeetingDetailsPopup: React.FC<MeetingDetailsPopupProps> = ({
         isVisible={showEditCompany}
         onClose={() => setShowEditCompany(false)}
         onSave={(data) => {
-          console.log('Company data saved:', data);
           setShowEditCompany(false);
         }}
       />
@@ -305,7 +304,6 @@ const MeetingDetailsPopup: React.FC<MeetingDetailsPopupProps> = ({
         isVisible={showEditDeal}
         onClose={() => setShowEditDeal(false)}
         onSave={(data) => {
-          console.log('Deal data saved:', data);
           setShowEditDeal(false);
         }}
       />
@@ -318,7 +316,6 @@ const MeetingDetailsPopup: React.FC<MeetingDetailsPopupProps> = ({
           setSelectedContactId(null);
         }}
         onSave={(data) => {
-          console.log('Contact data saved:', data);
           setShowEditContact(false);
           setSelectedContactId(null);
         }}

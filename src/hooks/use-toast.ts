@@ -13,10 +13,8 @@ export const useToast = () => {
       duration: duration || 5000
     };
     
-    console.log('添加Toast:', newToast);
     setToasts(prev => {
       const updated = [...prev, newToast];
-      console.log('当前Toast列表:', updated);
       return updated;
     });
     return id;

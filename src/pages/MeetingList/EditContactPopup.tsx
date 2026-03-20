@@ -234,7 +234,7 @@ const EditContactPopup: React.FC<EditContactPopupProps> = ({
                         />
                         <button
                           type="button"
-                          onClick={() => console.log('Add new company')}
+                          onClick={() => {}}
                           className="px-3 py-2 bg-[#605BFF] text-white rounded-lg hover:bg-[#5048E5] transition-colors duration-200 flex items-center"
                         >
                           <Plus size={16} />

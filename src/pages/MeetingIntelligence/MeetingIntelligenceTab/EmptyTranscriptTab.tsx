@@ -41,7 +41,6 @@ const EmptyTranscriptTab: React.FC = () => {
   const handleUpload = () => {
     if (uploadedFile) {
       // Handle upload logic here
-      console.log('Uploading file:', uploadedFile.name);
     }
   };
 

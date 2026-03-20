@@ -97,7 +97,6 @@ export const SimpleButton: React.FC<SimpleButtonProps> = ({ label, icon, variant
   };
 
   const handleClick = () => {
-    console.log(`${label} clicked`);
     if (onClick) {
       onClick();
     }

@@ -41,10 +41,6 @@ const ListView: React.FC<ListViewProps> = ({ meetings, viewType, currentDate }) 
   };
 
   const filteredMeetings = useMemo(() => {
-    console.log('All meetings:', meetings);
-    console.log('Current date:', currentDate);
-    console.log('View type:', viewType);
-    
     return meetings.filter(meeting => {
       if (viewType === 'day') {
         return isSameDate(meeting.date, currentDate);
@@ -55,8 +51,6 @@ const ListView: React.FC<ListViewProps> = ({ meetings, viewType, currentDate }) 
       }
     });
   }, [meetings, viewType, currentDate]);
-  
-  console.log('Filtered meetings:', filteredMeetings);
 
   const sortedMeetings = useMemo(() => {
     return [...filteredMeetings].sort((a, b) => {
@@ -380,10 +374,10 @@ const ListView: React.FC<ListViewProps> = ({ meetings, viewType, currentDate }) 
             deal: selectedMeeting.deal,
             attendees: selectedMeeting.attendees
           }}
-          onJoinMeeting={() => console.log('Joining meeting:', selectedMeeting.id)}
-          onReviewMeeting={() => console.log('Reviewing meeting:', selectedMeeting.id)}
-          onPrepareMeeting={() => console.log('Preparing meeting:', selectedMeeting.id)}
-          onDeleteMeeting={() => console.log('Deleting meeting:', selectedMeeting.id)}
+          onJoinMeeting={() => {}}
+          onReviewMeeting={() => {}}
+          onPrepareMeeting={() => {}}
+          onDeleteMeeting={() => {}}
         />
       )}
 

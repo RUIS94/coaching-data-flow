@@ -50,7 +50,6 @@ const ExistingMeetingPopup: React.FC<ExistingMeetingPopupProps> = ({
   };
 
   const handleSelect = (meeting: Meeting) => {
-    console.log('Selected meeting:', meeting);
     onClose();
   };
 

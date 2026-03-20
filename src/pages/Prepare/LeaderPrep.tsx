@@ -34,12 +34,6 @@ export default function ManagerPrep() {
     if (!risky || risky.risk_reasons.length === 0) return "—";
     return risky.risk_reasons[0].label;
   };
-  const riskCodeFor = (repName: string) => {
-    const deals = mockDeals.filter(d => d.owner_name === repName);
-    const risky = deals.find(d => d.risk_reasons && d.risk_reasons.length > 0);
-    if (!risky || risky.risk_reasons.length === 0) return "—";
-    return risky.risk_reasons[0].code;
-  };
   const prettyForecast = (fc?: string | null) =>
     fc === "BEST_CASE" ? "Best Case" : fc === "COMMIT" ? "Commit" : fc === "PIPELINE" ? "Pipeline" : fc === "OMIT" ? "Omit" : fc ?? "—";
   const forecastTagClass = (fc?: string | null) =>
