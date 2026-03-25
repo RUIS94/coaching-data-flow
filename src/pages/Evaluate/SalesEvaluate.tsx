@@ -1,8 +1,11 @@
 import { PageHeader } from "@/components/CommonComponents/PageHeader";
+import { useNavigate } from "react-router-dom";
 import { KPICard } from "@/components/CommonComponents/KPICard";
 import { mockAEReps, mockDeals, mockTasks, mockDecisions } from "@/data/mock";
+import PulseFlow from "@/components/dashboard/PulseFlow";
 
 export default function SalesEvaluate() {
+  const navigate = useNavigate();
   const me = mockAEReps[0]?.name ?? "Myself";
   const repDeals = mockDeals.filter(d => d.owner_name === me);
   const commitDeals = repDeals.filter(d => d.forecast_category === "COMMIT");
@@ -52,12 +55,32 @@ export default function SalesEvaluate() {
   })();
 
   return (
-    <div className="h-full bg-white overflow-auto">
+    <div className="h-full bg-white overflow-auto" style={{ scrollbarGutter: 'stable both-edges' }}>
+      <div className="sticky top-0 z-20 bg-white">
       <PageHeader
         title="E — Evaluate"
         subtitle="Measurement, pattern recognition & continuous improvement — ~15 min Friday"
         titleClassName="text-2xl font-bold text-gray-900"
-      />
+        inlineChildren
+      >
+        <div className="flex items-center w-full justify-end gap-8">
+          <div className="flex-shrink-0">
+            <PulseFlow
+              compact
+              completeOnClick
+              initialActiveStep="evaluate"
+              onNavigateToStep={(step) => {
+                if (step === "prepare") navigate("/sales-prep");
+                else if (step === "uncover") navigate("/sales-uncover");
+                else if (step === "lead") navigate("/sales-lead");
+                else if (step === "sync") navigate("/sales-sync");
+                else if (step === "evaluate") navigate("/sales-evaluate");
+              }}
+            />
+          </div>
+        </div>
+      </PageHeader>
+      </div>
       <div className="px-6 pb-6 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KPICard label="My Win Rate" value={myWinRate} trend="up" trendLabel="+1% WoW" trendPositive={true} />

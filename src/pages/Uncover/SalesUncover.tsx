@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/CommonComponents/PageHeader";
 import { mockDeals, type Deal, formatCurrency } from "@/data/mock";
 import { Badge } from "@/components/ui/badge";
 import { Bot, ChevronDown, Search, Trash2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import PulseFlow from "@/components/dashboard/PulseFlow";
 
 interface FlaggedCall {
   id: string;
@@ -63,6 +65,7 @@ function makeFlaggedCallsForDeal(d: Deal): FlaggedCall[] {
 }
 
 export default function SalesUncover() {
+  const navigate = useNavigate();
   const [selectedIds] = useState<string[]>(() => {
     try {
       const raw = localStorage.getItem("sales_selected_deal_ids");
@@ -145,12 +148,32 @@ export default function SalesUncover() {
   };
 
   return (
-    <div className="h-full bg-white overflow-auto">
-      <PageHeader
-        title="U — Uncover"
-        subtitle="Call coaching, skill diagnosis & voice note delivery — ~60 min"
-        titleClassName="text-2xl font-bold text-gray-900"
-      />
+    <div className="h-full bg-white overflow-auto" style={{ scrollbarGutter: 'stable both-edges' }}>
+      <div className="sticky top-0 z-20 bg-white">
+        <PageHeader
+          title="U — Uncover"
+          subtitle="Call coaching, skill diagnosis & voice note delivery — ~60 min"
+          titleClassName="text-2xl font-bold text-gray-900"
+          inlineChildren
+        >
+          <div className="flex items-center w-full justify-end gap-8">
+            <div className="flex-shrink-0">
+              <PulseFlow
+                compact
+                completeOnClick
+                initialActiveStep="uncover"
+                onNavigateToStep={(step) => {
+                  if (step === "prepare") navigate("/sales-prep");
+                  else if (step === "uncover") navigate("/sales-uncover");
+                  else if (step === "lead") navigate("/sales-lead");
+                  else if (step === "sync") navigate("/sales-sync");
+                  else if (step === "evaluate") navigate("/sales-evaluate");
+                }}
+              />
+            </div>
+          </div>
+        </PageHeader>
+      </div>
       <div className="px-6 pb-6 space-y-4">
         {current && (
           <div className="space-y-4">

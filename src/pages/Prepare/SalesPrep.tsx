@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
 import { mockDeals, mockAEReps, formatCurrency, type Deal } from '@/data/mock';
 import { PageHeader } from "@/components/CommonComponents/PageHeader";
 import SalesMethodologyCard from "@/components/Modules/SalesMethodologyCard";
@@ -7,8 +8,10 @@ import BuyerObjectionsCard from "@/components/Modules/BuyerObjectionsCard";
 import BuyerQuestionsCard from "@/components/Modules/BuyerQuestionsCard";
 import { Bot, Gauge, Users, Building2, FileText, Search, Filter, CheckCircle, AlertCircle, Send, Database, ChevronDown, User as UserIcon, Edit3, Trash2, Lock } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import PulseFlow from "@/components/dashboard/PulseFlow";
 
 const SalesPrep: React.FC = () => {
+  const navigate = useNavigate();
   const [repName] = useState<string>('Sarah Chen');
   const repDeals = useMemo(() => mockDeals.filter(d => d.owner_name === repName), [repName]);
   const topDeals = useMemo(() => repDeals.slice().sort((a, b) => b.amount - a.amount).slice(0, 6), [repDeals]);
@@ -181,12 +184,32 @@ const SalesPrep: React.FC = () => {
     </label>
   );
   return (
-    <div className="h-full bg-white overflow-auto">
-      <PageHeader
-        title="P — Prepare"
-        subtitle="Triage, self-assessment & prioritization — ~30 min Monday morning"
-        titleClassName="text-2xl font-bold text-gray-900"
-      />
+    <div className="h-full bg-white overflow-auto" style={{ scrollbarGutter: 'stable both-edges' }}>
+      <div className="sticky top-0 z-20 bg-white">
+        <PageHeader
+          title="P — Prepare"
+          subtitle="Triage, self-assessment & prioritization — ~30 min Monday morning"
+          titleClassName="text-2xl font-bold text-gray-900"
+          inlineChildren
+        >
+          <div className="flex items-center w-full justify-end gap-8">
+            <div className="flex-shrink-0">
+              <PulseFlow
+                compact
+                completeOnClick
+                initialActiveStep="prepare"
+                onNavigateToStep={(step) => {
+                  if (step === "prepare") navigate("/sales-prep");
+                  else if (step === "uncover") navigate("/sales-uncover");
+                  else if (step === "lead") navigate("/sales-lead");
+                  else if (step === "sync") navigate("/sales-sync");
+                  else if (step === "evaluate") navigate("/sales-evaluate");
+                }}
+              />
+            </div>
+          </div>
+        </PageHeader>
+      </div>
       <div className="px-6 pb-6">
       <div className="grid grid-cols-1 lg:grid-cols-10 gap-6">
         <div className="lg:col-span-4 bg-white rounded-2xl border border-gray-100 p-4">

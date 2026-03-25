@@ -19,6 +19,8 @@ import SalesMethodologyCard from "@/components/Modules/SalesMethodologyCard";
 import BuyerJourneyCard from "@/components/Modules/BuyerJourneyCard";
 import BuyerObjectionsCard from "@/components/Modules/BuyerObjectionsCard";
 import BuyerQuestionsCard from "@/components/Modules/BuyerQuestionsCard";
+import PulseFlow from "@/components/dashboard/PulseFlow";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function ManagerPrep() {
   const reps = mockAEReps.slice(0, 6);
@@ -215,12 +217,50 @@ export default function ManagerPrep() {
   };
 
   return (
-    <div className="h-full bg-white overflow-auto">
-      <PageHeader
-        title="P — Prepare"
-        subtitle="Triage, self-assessment & prioritization — ~30 min Monday morning"
-        titleClassName="text-2xl font-bold text-gray-900"
-      />
+    <div className="h-full bg-white overflow-auto" style={{ scrollbarGutter: 'stable both-edges' }}>
+      <div className="sticky top-0 z-20 bg-white">
+        <PageHeader
+          title="P — Prepare"
+          subtitle="Triage, self-assessment & prioritization — ~30 min Monday morning"
+          titleClassName="text-2xl font-bold text-gray-900"
+          inlineChildren
+        >
+          <div className="flex items-center w-full justify-end gap-8">
+            <div className="flex items-center gap-3">
+              <Select>
+                <SelectTrigger className="w-56 h-8 text-xs bg-white">
+                  <SelectValue placeholder="All Reps" />
+                </SelectTrigger>
+                <SelectContent>
+                  {reps.map(r => (
+                    <SelectItem
+                      key={r.user_id}
+                      value={r.name}
+                      className="text-xs hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-foreground"
+                    >
+                      {r.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-shrink-0">
+              <PulseFlow
+                compact
+                completeOnClick
+                initialActiveStep="prepare"
+                onNavigateToStep={(step) => {
+                  if (step === "prepare") navigate("/manager-prep");
+                  else if (step === "uncover") navigate("/leader-uncover");
+                  else if (step === "lead") navigate("/leader-lead");
+                  else if (step === "sync") navigate("/leader-sync");
+                  else if (step === "evaluate") navigate("/leader-evaluate");
+                }}
+              />
+            </div>
+          </div>
+        </PageHeader>
+      </div>
 
       <div className="px-6 pb-6">
         <Tabs defaultValue="self" className="w-full">

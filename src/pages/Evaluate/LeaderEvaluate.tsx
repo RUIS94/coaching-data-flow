@@ -1,7 +1,9 @@
 import { PageHeader } from "@/components/CommonComponents/PageHeader";
+import { useNavigate } from "react-router-dom";
 import { KPICard } from "@/components/CommonComponents/KPICard";
 import { mockAEReps } from "@/data/mock";
 import { Textarea } from "@/components/ui/textarea";
+import PulseFlow from "@/components/dashboard/PulseFlow";
 
 type TrackerRow = {
   rep: string;
@@ -20,18 +22,39 @@ const trackerData: TrackerRow[] = [
 ];
 
 export default function LeaderEvaluate() {
+  const navigate = useNavigate();
   const winRate = "31%";
   const forecastAccuracy = "78%";
   const dealProgression = "64%";
   const coachingCadence = "100%";
 
   return (
-    <div className="h-full bg-white overflow-auto">
+    <div className="h-full bg-white overflow-auto" style={{ scrollbarGutter: 'stable both-edges' }}>
+      <div className="sticky top-0 z-20 bg-white">
       <PageHeader
         title="E — Evaluate"
         subtitle="Measurement, pattern recognition & continuous improvement — ~15 min Friday"
         titleClassName="text-2xl font-bold text-gray-900"
-      />
+        inlineChildren
+      >
+        <div className="flex items-center w-full justify-end gap-8">
+          <div className="flex-shrink-0">
+            <PulseFlow
+              compact
+              completeOnClick
+              initialActiveStep="evaluate"
+              onNavigateToStep={(step) => {
+                if (step === "prepare") navigate("/manager-prep");
+                else if (step === "uncover") navigate("/leader-uncover");
+                else if (step === "lead") navigate("/leader-lead");
+                else if (step === "sync") navigate("/leader-sync");
+                else if (step === "evaluate") navigate("/leader-evaluate");
+              }}
+            />
+          </div>
+        </div>
+      </PageHeader>
+      </div>
       <div className="px-6 pb-6 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <KPICard label="Win Rate" value={winRate} trend="up" trendLabel="+ 2% from prior month" trendPositive={true} />

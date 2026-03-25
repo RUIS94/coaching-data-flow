@@ -11,6 +11,7 @@ import { mockDeals, mockAEReps, mockCalls, formatCurrency, type Deal, type RiskR
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import SalesMethodologyCard from "@/components/Modules/SalesMethodologyCard";
+import PulseFlow from "@/components/dashboard/PulseFlow";
 import BuyerJourneyCard from "@/components/Modules/BuyerJourneyCard";
 import BuyerObjectionsCard from "@/components/Modules/BuyerObjectionsCard";
 import BuyerQuestionsCard from "@/components/Modules/BuyerQuestionsCard";
@@ -160,6 +161,10 @@ function ManagerViewContent() {
   const assessmentsSubmittedPrev = coachingEligiblePrev.filter(d => d.self_assessment_status === 'SUBMITTED').length;
   const assessmentsPending = coachingEligibleCur.filter(d => d.self_assessment_status === 'PENDING' || d.self_assessment_status === 'TODO').length;
   const assessmentsDelta = assessmentsSubmittedCur - assessmentsSubmittedPrev;
+  const completedCoachingReps = Array.from(new Set(coachingEligibleCur.filter(d => d.self_assessment_status === 'SUBMITTED').map(d => d.owner_name)));
+  const upcomingCoachingReps = Array.from(new Set(coachingEligibleCur.filter(d => d.self_assessment_status === 'PENDING' || d.self_assessment_status === 'TODO').map(d => d.owner_name)));
+  const completedNote = (completedCoachingReps.length ? completedCoachingReps.join(', ') : 'No sessions completed') + ' →';
+  const upcomingNote = (upcomingCoachingReps.length ? upcomingCoachingReps.join(', ') : 'No upcoming sessions') + ' →';
   const worstCaseTopCur = currentWindowDeals
     .filter(d => d.forecast_category === 'COMMIT' && d.risk_level === 'RED')
     .slice()
@@ -473,6 +478,10 @@ function ManagerViewContent() {
     if (d.risk_level === 'AMBER' || d.amount >= 80000) return 'P2';
     return 'P3';
   };
+  const prettyForecast = (s: string | null | undefined) => {
+    const base = (s ?? '').toString().replace(/_/g, ' ').toLowerCase();
+    return base.replace(/(^|\s)\w/g, (m) => m.toUpperCase()) || '—';
+  };
 
   const tieringHeaderRange =
     timeRange === 'This week'
@@ -495,73 +504,43 @@ function ManagerViewContent() {
   const headerSubtitle = `${subtitlePeriodWord} of ${targetPeriodLabel} — ${totalAE} reps managed`;
   return (
     <div className="flex flex-col min-h-0 h-full bg-white">
-      <div className="sticky top-0 z-20 bg-white">
-        <PageHeader title="Coaching Dashboard" subtitle={headerSubtitle} titleClassName="text-2xl font-bold text-gray-900" inlineChildren>
-        {/* <Button size="sm" onClick={() => navigate('/session')}>
-          <Play className="h-3.5 w-3.5 mr-1.5" />Start 1:1
-        </Button> */}
-        {/* <Button variant="secondary" size="sm" onClick={() => navigate('/prep')}>
-          <FileDown className="h-3.5 w-3.5 mr-1.5" />Generate Prep Pack
-        </Button> */}
-        {/* <Button variant="ghost" size="icon" className="h-8 w-8">
-          <Settings className="h-4 w-4" />
-        </Button> */}
-        <div className="inline-flex items-center gap-8 ml-8">
-          <div className="hidden">
-            <Select value={timeRange} onValueChange={setTimeRange}>
-              <SelectTrigger className="w-40 h-8 text-xs bg-transparent">
-                <SelectValue placeholder="Select time range" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem className="hover:bg-muted data-[highlighted]:bg-muted data-[highlighted]:text-foreground" value="This week">This Week</SelectItem>
-                <SelectItem className="hover:bg-muted data-[highlighted]:bg-muted data-[highlighted]:text-foreground" value="This month">This Month</SelectItem>
-                <SelectItem className="hover:bg-muted data-[highlighted]:bg-muted data-[highlighted]:text-foreground" value="This quarter">This Quarter</SelectItem>
-                <SelectItem className="hover:bg-muted data-[highlighted]:bg-muted data-[highlighted]:text-foreground" value="This year">This Year</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="hidden md:flex items-center">
-            <div className="flex border rounded-lg overflow-hidden divide-x">
-              {[
-                { key: 'prepare', letter: 'P', name: 'Prepare', time: '~30 min' },
-                { key: 'uncover', letter: 'U', name: 'Uncover', time: '~60 min' },
-                { key: 'lead', letter: 'L', name: 'Lead', time: '~75 min' },
-                { key: 'sync', letter: 'S', name: 'Sync', time: '~30 min' },
-                { key: 'evaluate', letter: 'E', name: 'Evaluate', time: '~15 min' },
-              ].map((s) => (
-                <button
-                  key={s.key}
-                  type="button"
-                  aria-label={`Stage ${s.name}`}
-                  className="px-4 py-2 text-left hover:bg-muted transition-colors"
-                  onClick={() => {
-                    if (s.key === 'prepare') {
+      <div className="flex-1 overflow-y-auto min-h-0" style={{ scrollbarGutter: 'stable both-edges' }}>
+        <div className="sticky top-0 z-20 bg-white">
+          <PageHeader title="Coaching Dashboard" subtitle={headerSubtitle} titleClassName="text-2xl font-bold text-gray-900" inlineChildren>
+            <div className="flex items-center w-full justify-end gap-8">
+              <div className="flex items-center gap-3">
+                <Select value={timeRange} onValueChange={setTimeRange}>
+                  <SelectTrigger className="w-56 h-8 text-xs bg-white">
+                    <SelectValue placeholder="All" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem className="text-xs hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-foreground" value="This week">This Week</SelectItem>
+                    <SelectItem className="text-xs hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-foreground" value="This month">This Month</SelectItem>
+                    <SelectItem className="text-xs hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-foreground" value="This quarter">This Quarter</SelectItem>
+                    <SelectItem className="text-xs hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-foreground" value="This year">This Year</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-shrink-0">
+                <PulseFlow
+                  compact
+                  completeOnClick
+                  initialActiveStep={null}
+                  disableActiveHighlight
+                  onNavigateToStep={(step) => {
+                    if (step === 'prepare') {
                       navigate('/manager-prep');
                     }
                   }}
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="h-7 w-7 rounded-full border flex items-center justify-center text-xs font-semibold">
-                      {s.letter}
-                    </div>
-                    <div className="leading-tight">
-                      <div className="text-xs font-medium">{s.name}</div>
-                      <div className="text-[10px] text-muted-foreground">{s.time}</div>
-                    </div>
-                  </div>
-                </button>
-              ))}
+                />
+              </div>
             </div>
-          </div>
+          </PageHeader>
         </div>
-        </PageHeader>
-      </div>
-
-      <div className="flex-1 overflow-y-auto min-h-0">
       
 
       {/* KPI Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 px-4 sm:px-6 py-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 px-6 py-4">
         <KPICard
           label="Top Risk"
           value={formatCurrency(atRiskAmtCurrent)}
@@ -579,18 +558,14 @@ function ManagerViewContent() {
           trendPositive={topDealsDeltaAmt > 0}
         />
         <KPICard
-          label="Actions Completed"
-          value={`${actionsCompletedPctCur}%`}
-          trend={actionsCompletedDeltaPct === 0 ? 'flat' : actionsCompletedDeltaPct > 0 ? 'up' : 'down'}
-          trendLabel={actionsCompletedDeltaPct === 0 ? trendTextSame : formatDeltaPercent(actionsCompletedDeltaPct)}
-          trendPositive={actionsCompletedDeltaPct > 0}
+          label="Completed Coaching Sessions"
+          value={`${completedCoachingReps.length}`}
         />
         <KPICard
-          label="Assessments In"
-          value={`${assessmentsSubmittedCur}/${coachingEligibleCur.length}`}
-          trend="flat"
-          trendLabel={`${assessmentsPending} pending — nudge sent`}
-          trendPositive={assessmentsDelta > 0}
+          label="Upcoming Coaching Sessions"
+          value={`${upcomingCoachingReps.length}`}
+          note={upcomingNote}
+          onNoteClick={() => navigate('/manager-prep')}
         />
       </div>
 
@@ -907,7 +882,7 @@ function ManagerViewContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <div className="px-4 sm:px-6 pb-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 px-4 sm:px-6 pb-6">
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-start justify-between mb-3">
             <div>
@@ -929,10 +904,10 @@ function ManagerViewContent() {
                 <tr className="border-b border-border text-muted-foreground bg-secondary/40">
                   <th className="text-left px-4 py-2 font-medium" style={{ width: '26ch' }}>Deal</th>
                   <th className="text-left px-3 py-2 font-medium" style={{ width: '18ch' }}>Rep</th>
-                  <th className="text-right px-3 py-2 font-medium" style={{ width: '12ch' }}>Amount</th>
+                  <th className="text-left px-3 py-2 font-medium" style={{ width: '12ch' }}>Amount</th>
                   <th className="text-left px-3 py-2 font-medium" style={{ width: '16ch' }}>Stage</th>
-                  <th className="text-left px-3 py-2 font-medium" style={{ width: '22ch' }}>Risk Signal</th>
-                  <th className="text-right px-3 py-2 font-medium" style={{ width: '14ch' }}>Days Stalled</th>
+                  <th className="text-left px-3 py-2 font-medium" style={{ width: '28ch' }}>Risk Signal</th>
+                  <th className="text-left px-3 py-2 font-medium" style={{ width: '14ch' }}>Days Stalled</th>
                   <th className="text-left px-3 py-2 font-medium" style={{ width: '10ch' }}>Priority</th>
                   <th className="text-left px-3 py-2 font-medium" style={{ width: '10ch' }}>Action</th>
                 </tr>
@@ -951,12 +926,12 @@ function ManagerViewContent() {
                         <div className="text-[11px] text-muted-foreground">{d.deal_name}</div>
                       </td>
                       <td className="px-3 py-2 align-top">{d.owner_name}</td>
-                      <td className="px-3 py-2 align-top text-right">{formatCurrency(d.amount)}</td>
+                      <td className="px-3 py-2 align-top text-left">{formatCurrency(d.amount)}</td>
                       <td className="px-3 py-2 align-top">{d.stage_name}</td>
                       <td className="px-3 py-2 align-top">
-                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${riskBadgeClass(d)}`}>{signal}</span>
+                        <span className={`inline-flex items-center justify-center text-center px-2 py-0.5 rounded-md text-[11px] font-medium whitespace-normal break-words ${riskBadgeClass(d)}`}>{signal}</span>
                       </td>
-                      <td className="px-3 py-2 align-top text-right">{typeof d.staleness_days === 'number' ? d.staleness_days : '—'}</td>
+                      <td className="px-3 py-2 align-top text-left">{typeof d.staleness_days === 'number' ? d.staleness_days : '—'}</td>
                       <td className="px-3 py-2 align-top">
                         <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${prCls}`}>{pr}</span>
                       </td>
@@ -986,8 +961,6 @@ function ManagerViewContent() {
             </table>
           </div>
         </div>
-      </div>
-      <div className="px-4 sm:px-6 pb-6">
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="flex items-start justify-between mb-3">
             <div>
@@ -1016,10 +989,10 @@ function ManagerViewContent() {
                     <tr className="border-b border-border text-muted-foreground bg-secondary/40">
                       <th className="text-left px-4 py-2 font-medium" style={{ width: '26ch' }}>Deal</th>
                       <th className="text-left px-3 py-2 font-medium" style={{ width: '18ch' }}>Rep</th>
-                      <th className="text-right px-3 py-2 font-medium" style={{ width: '12ch' }}>Amount</th>
+                      <th className="text-left px-3 py-2 font-medium" style={{ width: '12ch' }}>Amount</th>
                       <th className="text-left px-3 py-2 font-medium" style={{ width: '16ch' }}>Stage</th>
                       <th className="text-left px-3 py-2 font-medium" style={{ width: '16ch' }}>Forecast</th>
-                      <th className="text-left px-3 py-2 font-medium" style={{ width: '16ch' }}>Next Step</th>
+                      <th className="text-left px-3 py-2 font-medium" style={{ width: '26ch' }}>Next Step</th>
                       <th className="text-left px-3 py-2 font-medium" style={{ width: '10ch' }}>Action</th>
                     </tr>
                   </thead>
@@ -1031,16 +1004,20 @@ function ManagerViewContent() {
                           <div className="text-[11px] text-muted-foreground">{d.deal_name}</div>
                         </td>
                         <td className="px-3 py-2 align-top">{d.owner_name}</td>
-                        <td className="px-3 py-2 align-top text-right">{formatCurrency(d.amount)}</td>
+                        <td className="px-3 py-2 align-top text-left">{formatCurrency(d.amount)}</td>
                         <td className="px-3 py-2 align-top">{d.stage_name}</td>
-                        <td className="px-3 py-2 align-top">{d.forecast_category}</td>
+                        <td className="px-3 py-2 align-top">
+                          <span className="inline-flex items-center justify-center text-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-secondary/40 text-muted-foreground whitespace-normal break-words">
+                            {prettyForecast(d.forecast_category)}
+                          </span>
+                        </td>
                         <td className="px-3 py-2 align-top">
                           {d.next_step ? (
-                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${d.next_step.is_buyer_confirmed ? 'bg-status-green/10 text-status-green' : 'bg-secondary/50 text-muted-foreground'}`}>
+                            <span className={`inline-flex items-center justify-center text-center px-2 py-0.5 rounded-md text-[11px] font-medium whitespace-normal break-words ${d.next_step.is_buyer_confirmed ? 'bg-status-green/10 text-status-green' : 'bg-secondary/50 text-muted-foreground'}`}>
                               {d.next_step.is_buyer_confirmed ? 'Buyer confirmed' : 'Not confirmed'}
                             </span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary/50 text-muted-foreground">No next step</span>
+                            <span className="inline-flex items-center justify-center text-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-secondary/50 text-muted-foreground whitespace-normal break-words">No next step</span>
                           )}
                         </td>
                         <td className="px-3 py-2 align-top">
@@ -1051,9 +1028,9 @@ function ManagerViewContent() {
                               </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem>review</DropdownMenuItem>
-                              <DropdownMenuItem>coaching</DropdownMenuItem>
-                              <DropdownMenuItem>update request</DropdownMenuItem>
+                              <DropdownMenuItem className="whitespace-nowrap">review</DropdownMenuItem>
+                              <DropdownMenuItem className="whitespace-nowrap">coaching</DropdownMenuItem>
+                              <DropdownMenuItem className="whitespace-nowrap">update request</DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>

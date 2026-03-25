@@ -1,0 +1,1425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>sam.coach — The PULSE Method</title>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #242736;
+    --surface3: #2e3145;
+    --border: #363952;
+    --text: #e8e9ed;
+    --text2: #9ca3af;
+    --text3: #6b7280;
+    --accent: #6366f1;
+    --accent-light: #818cf8;
+    --green: #22c55e;
+    --green-bg: #052e16;
+    --amber: #f59e0b;
+    --amber-bg: #451a03;
+    --red: #ef4444;
+    --red-bg: #450a0a;
+    --blue: #3b82f6;
+    --blue-bg: #172554;
+    --purple: #a855f7;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* Layout */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar { width: 240px; background: var(--surface); border-right: 1px solid var(--border); padding: 20px 0; flex-shrink: 0; position: fixed; top: 0; left: 0; bottom: 0; overflow-y: auto; z-index: 10; }
+  .main { margin-left: 240px; flex: 1; padding: 28px 36px; min-height: 100vh; }
+
+  /* Sidebar */
+  .logo { padding: 0 20px 24px; display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 32px; height: 32px; background: var(--accent); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; }
+  .logo-text { font-size: 16px; font-weight: 700; }
+  .logo-text span { color: var(--accent-light); }
+
+  .role-toggle { margin: 0 16px 20px; background: var(--surface2); border-radius: 10px; padding: 4px; display: flex; }
+  .role-btn { flex: 1; padding: 8px 0; border: none; background: none; color: var(--text2); font-size: 12px; font-weight: 600; cursor: pointer; border-radius: 7px; transition: all .2s; }
+  .role-btn.active { background: var(--accent); color: white; }
+
+  .nav-section { padding: 16px 16px 8px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; cursor: pointer; color: var(--text2); font-size: 13px; font-weight: 500; transition: all .15s; border-left: 3px solid transparent; }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--surface2); color: var(--accent-light); border-left-color: var(--accent); }
+  .nav-item .nav-icon { width: 20px; text-align: center; font-size: 15px; }
+  .nav-item .phase-tag { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; background: var(--surface3); color: var(--text3); margin-left: auto; }
+
+  .sidebar-footer { position: absolute; bottom: 0; left: 0; right: 0; padding: 16px 20px; border-top: 1px solid var(--border); }
+  .user-info { display: flex; align-items: center; gap: 10px; }
+  .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+  .user-name { font-size: 13px; font-weight: 600; }
+  .user-role { font-size: 11px; color: var(--text3); }
+
+  /* Page Header */
+  .page-header { margin-bottom: 28px; }
+  .page-header h1 { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+  .page-header p { color: var(--text2); font-size: 14px; }
+  .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text3); margin-bottom: 10px; }
+  .breadcrumb .sep { color: var(--text3); }
+  .breadcrumb .current { color: var(--accent-light); }
+
+  /* Cards */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .card-title { font-size: 15px; font-weight: 600; }
+  .card-subtitle { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  /* Stat Cards */
+  .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px; }
+  .stat-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; color: var(--text3); margin-bottom: 8px; }
+  .stat-value { font-size: 28px; font-weight: 700; }
+  .stat-change { font-size: 12px; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+  .stat-change.up { color: var(--green); }
+  .stat-change.down { color: var(--red); }
+
+  /* Tags / Badges */
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-green { background: var(--green-bg); color: var(--green); }
+  .badge-amber { background: var(--amber-bg); color: var(--amber); }
+  .badge-red { background: var(--red-bg); color: var(--red); }
+  .badge-blue { background: var(--blue-bg); color: var(--blue); }
+  .badge-purple { background: rgba(168,85,247,.15); color: var(--purple); }
+
+  .priority { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 700; }
+  .priority-p1 { background: rgba(239,68,68,.15); color: #ef4444; }
+  .priority-p2 { background: rgba(234,88,12,.15); color: #ea580c; }
+  .priority-p3 { background: rgba(202,138,4,.15); color: #ca8a04; }
+
+  /* Tables */
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th { text-align: left; padding: 10px 14px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .7px; color: var(--text3); border-bottom: 1px solid var(--border); }
+  .data-table td { padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border); }
+  .data-table tr:hover td { background: var(--surface2); }
+  .data-table .deal-name { font-weight: 600; color: var(--text); }
+  .data-table .deal-company { font-size: 12px; color: var(--text2); }
+
+  /* Progress bars */
+  .progress-bar { height: 6px; background: var(--surface3); border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 3px; transition: width .5s ease; }
+
+  /* Buttons */
+  .btn { padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; transition: all .15s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent-light); }
+  .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: var(--surface3); }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .btn-ghost { background: none; color: var(--accent-light); }
+  .btn-ghost:hover { background: var(--surface2); }
+
+  /* Two column layout */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  /* Timeline */
+  .timeline { position: relative; padding-left: 24px; }
+  .timeline::before { content: ''; position: absolute; left: 7px; top: 4px; bottom: 4px; width: 2px; background: var(--border); }
+  .timeline-item { position: relative; padding-bottom: 18px; }
+  .timeline-dot { position: absolute; left: -21px; top: 4px; width: 12px; height: 12px; border-radius: 50%; border: 2px solid; }
+  .timeline-dot.done { border-color: var(--green); background: var(--green); }
+  .timeline-dot.current { border-color: var(--accent); background: var(--accent); }
+  .timeline-dot.pending { border-color: var(--text3); background: transparent; }
+  .timeline-time { font-size: 11px; color: var(--text3); margin-bottom: 2px; }
+  .timeline-text { font-size: 13px; font-weight: 500; }
+  .timeline-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+  /* Rep tier cards */
+  .rep-card { background: var(--surface2); border-radius: var(--radius-sm); padding: 14px; display: flex; align-items: center; gap: 12px; margin-bottom: 10px; cursor: pointer; transition: all .15s; border: 1px solid transparent; }
+  .rep-card:hover { border-color: var(--accent); }
+  .rep-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .rep-info { flex: 1; min-width: 0; }
+  .rep-name { font-size: 13px; font-weight: 600; }
+  .rep-meta { font-size: 11px; color: var(--text2); }
+  .rep-tier { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; }
+  .tier-sync { background: rgba(99,102,241,.15); color: var(--accent-light); }
+  .tier-async { background: rgba(34,197,94,.15); color: var(--green); }
+  .tier-stretch { background: rgba(168,85,247,.15); color: var(--purple); }
+
+  /* Coaching canvas */
+  .canvas-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .canvas-cell { background: var(--surface2); border-radius: var(--radius-sm); padding: 12px; }
+  .canvas-cell-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .8px; color: var(--text3); margin-bottom: 6px; }
+  .canvas-cell-value { font-size: 13px; font-weight: 500; }
+
+  /* Voice note */
+  .voice-note { background: var(--surface2); border-radius: var(--radius); padding: 14px 16px; display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .voice-play { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+  .voice-wave { flex: 1; height: 24px; display: flex; align-items: center; gap: 2px; }
+  .voice-bar { width: 3px; background: var(--accent-light); border-radius: 2px; opacity: .5; }
+  .voice-duration { font-size: 12px; color: var(--text2); flex-shrink: 0; }
+
+  /* Empty state */
+  .empty-state { text-align: center; padding: 40px 20px; color: var(--text3); }
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state h3 { font-size: 15px; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+  .empty-state p { font-size: 13px; }
+
+  /* Pulse flow visualization */
+  .pulse-flow { display: flex; align-items: center; gap: 0; margin-bottom: 24px; }
+  .pulse-step { flex: 1; text-align: center; padding: 14px 10px; background: var(--surface); border: 1px solid var(--border); cursor: pointer; transition: all .2s; position: relative; }
+  .pulse-step:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+  .pulse-step:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
+  .pulse-step.active { background: var(--accent); border-color: var(--accent); }
+  .pulse-step .step-letter { font-size: 20px; font-weight: 800; }
+  .pulse-step .step-name { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .8px; margin-top: 2px; }
+  .pulse-step .step-time { font-size: 10px; color: var(--text2); margin-top: 2px; }
+  .pulse-step.active .step-time { color: rgba(255,255,255,.7); }
+  .pulse-step::after { content: ''; position: absolute; right: -8px; top: 50%; transform: translateY(-50%); width: 0; height: 0; border-top: 8px solid transparent; border-bottom: 8px solid transparent; border-left: 8px solid var(--border); z-index: 1; }
+  .pulse-step:last-child::after { display: none; }
+  .pulse-step.active::after { border-left-color: var(--accent); }
+
+  /* Tab bar for sub-sections */
+  .tab-bar { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+  .tab-item { padding: 10px 20px; font-size: 13px; font-weight: 600; color: var(--text2); cursor: pointer; border-bottom: 2px solid transparent; transition: all .15s; }
+  .tab-item:hover { color: var(--text); }
+  .tab-item.active { color: var(--accent-light); border-bottom-color: var(--accent); }
+
+  /* Section visibility */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* Notification bell */
+  .notification-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--red); position: absolute; top: -2px; right: -2px; }
+
+  /* Checklist */
+  .checklist-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .checklist-item:last-child { border-bottom: none; }
+  .check-box { width: 18px; height: 18px; border-radius: 4px; border: 2px solid var(--text3); flex-shrink: 0; margin-top: 1px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all .15s; }
+  .check-box.checked { background: var(--green); border-color: var(--green); }
+  .check-text { font-size: 13px; }
+  .check-text.done { text-decoration: line-through; color: var(--text3); }
+
+  /* Animations */
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  .animate-in { animation: fadeIn .3s ease; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--surface3); border-radius: 3px; }
+
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .two-col, .three-col { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="logo-icon">S</div>
+      <div class="logo-text">sam<span>.coach</span></div>
+    </div>
+
+    <div class="role-toggle">
+      <button class="role-btn active" onclick="switchRole('leader')" id="role-leader">Leader</button>
+      <button class="role-btn" onclick="switchRole('rep')" id="role-rep">Rep</button>
+    </div>
+
+    <div class="nav-section">PULSE Method</div>
+    <div class="nav-item active" onclick="navigate('dashboard')">
+      <span class="nav-icon">📊</span> Dashboard
+    </div>
+    <div class="nav-item" onclick="navigate('prepare')">
+      <span class="nav-icon">🎯</span> Prepare
+      <span class="phase-tag">P</span>
+    </div>
+    <div class="nav-item" onclick="navigate('uncover')">
+      <span class="nav-icon">🔍</span> Uncover
+      <span class="phase-tag">U</span>
+    </div>
+    <div class="nav-item" onclick="navigate('lead')">
+      <span class="nav-icon">🤝</span> Lead
+      <span class="phase-tag">L</span>
+    </div>
+    <div class="nav-item" onclick="navigate('sync')">
+      <span class="nav-icon">📡</span> Sync
+      <span class="phase-tag">S</span>
+    </div>
+    <div class="nav-item" onclick="navigate('evaluate')">
+      <span class="nav-icon">📈</span> Evaluate
+      <span class="phase-tag">E</span>
+    </div>
+
+    <div class="nav-section" style="margin-top:16px">Tools</div>
+    <div class="nav-item" onclick="navigate('coaching-plays')">
+      <span class="nav-icon">📋</span> Coaching Plays
+    </div>
+    <div class="nav-item" onclick="navigate('kpis')">
+      <span class="nav-icon">🎯</span> KPIs
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="user-avatar" id="user-avatar">RM</div>
+        <div>
+          <div class="user-name" id="user-display-name">Roger M.</div>
+          <div class="user-role" id="user-display-role">Sales Leader</div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <main class="main">
+
+    <!-- ==================== DASHBOARD ==================== -->
+    <div class="section active" id="sec-dashboard">
+      <div class="page-header">
+        <div class="breadcrumb">sam.coach <span class="sep">/</span> <span class="current">Dashboard</span></div>
+        <h1 id="dash-title">Weekly Coaching Dashboard</h1>
+        <p id="dash-subtitle">Week of March 16, 2026 — 8 reps managed</p>
+      </div>
+
+      <!-- PULSE Flow -->
+      <div class="pulse-flow">
+        <div class="pulse-step active" onclick="navigate('prepare')">
+          <div class="step-letter">P</div>
+          <div class="step-name">Prepare</div>
+          <div class="step-time">~30 min</div>
+        </div>
+        <div class="pulse-step" onclick="navigate('uncover')">
+          <div class="step-letter">U</div>
+          <div class="step-name">Uncover</div>
+          <div class="step-time">~60 min</div>
+        </div>
+        <div class="pulse-step" onclick="navigate('lead')">
+          <div class="step-letter">L</div>
+          <div class="step-name">Lead</div>
+          <div class="step-time">~75 min</div>
+        </div>
+        <div class="pulse-step" onclick="navigate('sync')">
+          <div class="step-letter">S</div>
+          <div class="step-name">Sync</div>
+          <div class="step-time">~30 min</div>
+        </div>
+        <div class="pulse-step" onclick="navigate('evaluate')">
+          <div class="step-letter">E</div>
+          <div class="step-name">Evaluate</div>
+          <div class="step-time">~15 min</div>
+        </div>
+      </div>
+
+      <!-- Leader Stats -->
+      <div id="leader-dash">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Pipeline Coverage</div>
+            <div class="stat-value" style="color:var(--green)">3.4x</div>
+            <div class="stat-change up">↑ 0.3x from last week</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Team Commit</div>
+            <div class="stat-value">$428K</div>
+            <div class="stat-change up">↑ 12% vs. target pace</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Actions Completed</div>
+            <div class="stat-value" style="color:var(--amber)">71%</div>
+            <div class="stat-change down">↓ 5% from last week</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Assessments In</div>
+            <div class="stat-value">6/8</div>
+            <div class="stat-change" style="color:var(--text2)">2 pending — nudge sent</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <!-- Rep Tiers -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Rep Tiering This Week</div>
+                <div class="card-subtitle">AI-suggested based on CRM signals + self-assessments</div>
+              </div>
+              <button class="btn btn-sm btn-secondary">Adjust</button>
+            </div>
+            <div style="margin-bottom:12px">
+              <div style="font-size:11px;font-weight:600;color:var(--accent-light);margin-bottom:8px">SYNC 1:1 (Priority)</div>
+              <div class="rep-card">
+                <div class="rep-avatar" style="background:var(--red-bg);color:var(--red)">SK</div>
+                <div class="rep-info">
+                  <div class="rep-name">Sarah Kim</div>
+                  <div class="rep-meta">3 stalled deals · Commit dropped 20%</div>
+                </div>
+                <span class="rep-tier tier-sync">Sync</span>
+              </div>
+              <div class="rep-card">
+                <div class="rep-avatar" style="background:var(--amber-bg);color:var(--amber)">JM</div>
+                <div class="rep-info">
+                  <div class="rep-name">James Martinez</div>
+                  <div class="rep-meta">Pipeline coverage 2.1x · Needs deal help</div>
+                </div>
+                <span class="rep-tier tier-sync">Sync</span>
+              </div>
+              <div class="rep-card">
+                <div class="rep-avatar" style="background:var(--amber-bg);color:var(--amber)">LP</div>
+                <div class="rep-info">
+                  <div class="rep-name">Lisa Park</div>
+                  <div class="rep-meta">Close date pushed on $85K deal</div>
+                </div>
+                <span class="rep-tier tier-sync">Sync</span>
+              </div>
+              <div class="rep-card">
+                <div class="rep-avatar" style="background:var(--blue-bg);color:var(--blue)">TC</div>
+                <div class="rep-info">
+                  <div class="rep-name">Tom Chen</div>
+                  <div class="rep-meta">New to team · Week 3 of ramp</div>
+                </div>
+                <span class="rep-tier tier-sync">Sync</span>
+              </div>
+            </div>
+            <div style="margin-bottom:12px">
+              <div style="font-size:11px;font-weight:600;color:var(--green);margin-bottom:8px">ASYNC ONLY (On Track)</div>
+              <div class="rep-card">
+                <div class="rep-avatar" style="background:var(--green-bg);color:var(--green)">AR</div>
+                <div class="rep-info">
+                  <div class="rep-name">Alex Rodriguez</div>
+                  <div class="rep-meta">4.2x coverage · Actions 90% done</div>
+                </div>
+                <span class="rep-tier tier-async">Async</span>
+              </div>
+              <div class="rep-card">
+                <div class="rep-avatar" style="background:var(--green-bg);color:var(--green)">MJ</div>
+                <div class="rep-info">
+                  <div class="rep-name">Maya Johnson</div>
+                  <div class="rep-meta">3.8x coverage · Win rate trending up</div>
+                </div>
+                <span class="rep-tier tier-async">Async</span>
+              </div>
+            </div>
+            <div>
+              <div style="font-size:11px;font-weight:600;color:var(--purple);margin-bottom:8px">STRETCH ASSIGNMENT</div>
+              <div class="rep-card">
+                <div class="rep-avatar" style="background:rgba(168,85,247,.15);color:var(--purple)">DW</div>
+                <div class="rep-info">
+                  <div class="rep-name">David Wang</div>
+                  <div class="rep-meta">Top performer · 128% of target pace</div>
+                </div>
+                <span class="rep-tier tier-stretch">Stretch</span>
+              </div>
+              <div class="rep-card">
+                <div class="rep-avatar" style="background:rgba(168,85,247,.15);color:var(--purple)">EN</div>
+                <div class="rep-info">
+                  <div class="rep-name">Emma Nelson</div>
+                  <div class="rep-meta">Top performer · Mentor for Tom C.</div>
+                </div>
+                <span class="rep-tier tier-stretch">Stretch</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- This Week's Agenda -->
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">This Week's Coaching Agenda</div>
+                <div class="card-subtitle">Auto-generated from PULSE inputs</div>
+              </div>
+              <span class="badge badge-blue">~3.5 hrs total</span>
+            </div>
+            <div class="timeline">
+              <div class="timeline-item">
+                <div class="timeline-dot done"></div>
+                <div class="timeline-time">MON — Prepare (30 min)</div>
+                <div class="timeline-text">Review CRM alerts, self-assessments, tier reps</div>
+                <div class="timeline-sub">6/8 assessments received · 5 CRM alerts flagged</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot current"></div>
+                <div class="timeline-time">MON-TUE — Uncover (60 min)</div>
+                <div class="timeline-text">Review 4 flagged calls at 2x speed</div>
+                <div class="timeline-sub">Sarah: objection handling · James: discovery · Lisa: closing · Tom: intro</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot pending"></div>
+                <div class="timeline-time">TUE — Uncover (20 min)</div>
+                <div class="timeline-text">Send 4 coaching voice notes (P-O-Q formula)</div>
+                <div class="timeline-sub">Positive → Observation → Question per rep</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot pending"></div>
+                <div class="timeline-time">TUE-THU — Lead (75 min)</div>
+                <div class="timeline-text">4 sync 1:1s (15-20 min each)</div>
+                <div class="timeline-sub">Sarah: pipeline recovery · James: deal strategy · Lisa: $85K deal · Tom: ramp check</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot pending"></div>
+                <div class="timeline-time">WED — Sync (30 min)</div>
+                <div class="timeline-text">Review Pipeline Pulse posts + record synthesis video</div>
+                <div class="timeline-sub">Team commit, wins, common themes, priorities</div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-dot pending"></div>
+                <div class="timeline-time">FRI — Evaluate (15 min)</div>
+                <div class="timeline-text">Review KPIs + weekly reflection</div>
+                <div class="timeline-sub">5 reflection questions · feed into next week's Prepare</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Risk Alerts -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">CRM Risk Alerts</div>
+              <div class="card-subtitle">Deals requiring coaching attention this week</div>
+            </div>
+            <span class="badge badge-red">5 alerts</span>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Deal</th>
+                <th>Rep</th>
+                <th>Amount</th>
+                <th>Stage</th>
+                <th>Risk Signal</th>
+                <th>Days Stalled</th>
+                <th>Priority</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="deal-name">Meridian Corp</span><br><span class="deal-company">Enterprise expansion</span></td>
+                <td>Sarah Kim</td>
+                <td>$120K</td>
+                <td>Negotiation</td>
+                <td><span class="badge badge-red">Single-threaded</span></td>
+                <td>12</td>
+                <td><span class="priority priority-p1">P1</span></td>
+              </tr>
+              <tr>
+                <td><span class="deal-name">Atlas Industries</span><br><span class="deal-company">New logo</span></td>
+                <td>James Martinez</td>
+                <td>$85K</td>
+                <td>Proposal</td>
+                <td><span class="badge badge-amber">No next step</span></td>
+                <td>8</td>
+                <td><span class="priority priority-p1">P1</span></td>
+              </tr>
+              <tr>
+                <td><span class="deal-name">Vertex Solutions</span><br><span class="deal-company">Renewal + upsell</span></td>
+                <td>Lisa Park</td>
+                <td>$85K</td>
+                <td>Discovery</td>
+                <td><span class="badge badge-amber">Close date pushed</span></td>
+                <td>—</td>
+                <td><span class="priority priority-p2">P2</span></td>
+              </tr>
+              <tr>
+                <td><span class="deal-name">Nova Healthcare</span><br><span class="deal-company">New logo</span></td>
+                <td>Sarah Kim</td>
+                <td>$65K</td>
+                <td>Discovery</td>
+                <td><span class="badge badge-amber">No activity 7d</span></td>
+                <td>7</td>
+                <td><span class="priority priority-p2">P2</span></td>
+              </tr>
+              <tr>
+                <td><span class="deal-name">Peak Dynamics</span><br><span class="deal-company">Expansion</span></td>
+                <td>Tom Chen</td>
+                <td>$42K</td>
+                <td>Qualification</td>
+                <td><span class="badge badge-blue">Ramp rep — needs coaching</span></td>
+                <td>—</td>
+                <td><span class="priority priority-p3">P3</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Rep Dashboard -->
+      <div id="rep-dash" style="display:none">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">My Pipeline</div>
+            <div class="stat-value">$320K</div>
+            <div class="stat-change up">↑ Coverage: 3.1x</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Weekly Commit</div>
+            <div class="stat-value">$45K</div>
+            <div class="stat-change" style="color:var(--text2)">vs. $52K last week</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Actions Done</div>
+            <div class="stat-value" style="color:var(--green)">4/5</div>
+            <div class="stat-change up">1 due tomorrow</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Coaching Score</div>
+            <div class="stat-value" style="color:var(--accent-light)">7.8</div>
+            <div class="stat-change up">↑ 0.4 from last week</div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">My Weekly Checklist</div>
+                <div class="card-subtitle">PULSE coaching rhythm</div>
+              </div>
+            </div>
+            <div class="checklist-item"><div class="check-box checked">✓</div><div><div class="check-text done">Submit self-assessment</div><div style="font-size:11px;color:var(--text3)">Mon 8am</div></div></div>
+            <div class="checklist-item"><div class="check-box checked">✓</div><div><div class="check-text done">Flag call for coaching</div><div style="font-size:11px;color:var(--text3)">Mon — flagged Meridian call</div></div></div>
+            <div class="checklist-item"><div class="check-box checked">✓</div><div><div class="check-text done">Respond to coaching voice note</div><div style="font-size:11px;color:var(--text3)">Tue — reflection submitted</div></div></div>
+            <div class="checklist-item"><div class="check-box"></div><div><div class="check-text">Post Pipeline Pulse update</div><div style="font-size:11px;color:var(--amber)">Due Wednesday 9am</div></div></div>
+            <div class="checklist-item"><div class="check-box"></div><div><div class="check-text">Complete 1:1 action items</div><div style="font-size:11px;color:var(--text3)">Due Friday</div></div></div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Coaching Voice Note</div>
+                <div class="card-subtitle">From your leader — received yesterday</div>
+              </div>
+              <span class="badge badge-green">Responded</span>
+            </div>
+            <div class="voice-note">
+              <div class="voice-play">▶</div>
+              <div class="voice-wave" id="voice-wave"></div>
+              <div class="voice-duration">1:42</div>
+            </div>
+            <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;margin-top:8px">
+              <div style="font-size:11px;font-weight:600;color:var(--green);margin-bottom:6px">COACHING FORMULA: P-O-Q</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.5">
+                <strong style="color:var(--text)">Positive:</strong> Great job building rapport on the Meridian call.<br>
+                <strong style="color:var(--text)">Observation:</strong> I noticed you moved to pricing before confirming the compelling event.<br>
+                <strong style="color:var(--text)">Question:</strong> What would happen if you anchored the urgency before discussing numbers?
+              </div>
+            </div>
+            <div style="margin-top:12px;background:var(--surface2);border-radius:var(--radius-sm);padding:12px;border-left:3px solid var(--accent)">
+              <div style="font-size:11px;font-weight:600;color:var(--accent-light);margin-bottom:4px">YOUR REFLECTION</div>
+              <div style="font-size:12px;color:var(--text2);line-height:1.5">
+                Good point — I jumped to pricing because the prospect asked. Next time I'll redirect: "Before we get to numbers, I want to make sure we've nailed the timeline. What's driving the Q2 deadline?"
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- My Deals -->
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">My Deals — Health Check</div>
+              <div class="card-subtitle">CRM-synced deal status with coaching signals</div>
+            </div>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Deal</th><th>Amount</th><th>Stage</th><th>Health</th><th>Next Step</th><th>Days in Stage</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><span class="deal-name">Meridian Corp</span></td>
+                <td>$120K</td>
+                <td>Negotiation</td>
+                <td><span class="badge badge-red">At risk</span></td>
+                <td>Multi-thread to CFO</td>
+                <td>12</td>
+              </tr>
+              <tr>
+                <td><span class="deal-name">Nova Healthcare</span></td>
+                <td>$65K</td>
+                <td>Discovery</td>
+                <td><span class="badge badge-amber">Needs attention</span></td>
+                <td>Schedule technical deep-dive</td>
+                <td>7</td>
+              </tr>
+              <tr>
+                <td><span class="deal-name">Brightline Media</span></td>
+                <td>$78K</td>
+                <td>Proposal</td>
+                <td><span class="badge badge-green">On track</span></td>
+                <td>Follow up on proposal review</td>
+                <td>3</td>
+              </tr>
+              <tr>
+                <td><span class="deal-name">Summit Group</span></td>
+                <td>$55K</td>
+                <td>Qualification</td>
+                <td><span class="badge badge-green">On track</span></td>
+                <td>Confirm budget with VP</td>
+                <td>5</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== PREPARE ==================== -->
+    <div class="section" id="sec-prepare">
+      <div class="page-header">
+        <div class="breadcrumb">sam.coach <span class="sep">/</span> PULSE <span class="sep">/</span> <span class="current">Prepare</span></div>
+        <h1>P — Prepare</h1>
+        <p>Triage, self-assessment & prioritization — ~30 min Monday morning</p>
+      </div>
+
+      <div id="leader-prepare">
+        <div class="tab-bar">
+          <div class="tab-item active">Self-Assessments</div>
+          <div class="tab-item">CRM Alerts</div>
+          <div class="tab-item">Rep Tiering</div>
+          <div class="tab-item">Coaching Agenda</div>
+        </div>
+
+        <div class="stats-grid" style="grid-template-columns:repeat(3,1fr)">
+          <div class="stat-card">
+            <div class="stat-label">Assessments Received</div>
+            <div class="stat-value">6 <span style="font-size:16px;color:var(--text3)">/ 8</span></div>
+            <div class="stat-change" style="color:var(--amber)">Nudge sent to Sarah K., Tom C.</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">CRM Alerts</div>
+            <div class="stat-value" style="color:var(--red)">5</div>
+            <div class="stat-change">2 critical · 2 warning · 1 info</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Avg Confidence Score</div>
+            <div class="stat-value">6.8 <span style="font-size:16px;color:var(--text3)">/ 10</span></div>
+            <div class="stat-change down">↓ 0.3 from last week</div>
+          </div>
+        </div>
+
+        <!-- Self-assessment cards -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">Rep Self-Assessments</div>
+            <button class="btn btn-sm btn-primary">Nudge remaining</button>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Rep</th><th>Top Deal</th><th>Biggest Risk</th><th>Help Needed</th><th>Commit</th><th>Confidence</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>Alex Rodriguez</strong></td>
+                <td>Pinnacle Systems ($95K)</td>
+                <td>Champion on PTO next 2 weeks</td>
+                <td>Intro to their CFO</td>
+                <td>$95K</td>
+                <td>8/10</td>
+                <td><span class="badge badge-green">Submitted</span></td>
+              </tr>
+              <tr>
+                <td><strong>James Martinez</strong></td>
+                <td>Atlas Industries ($85K)</td>
+                <td>Competitor in late evaluation</td>
+                <td>Competitive positioning help</td>
+                <td>$85K</td>
+                <td>5/10</td>
+                <td><span class="badge badge-green">Submitted</span></td>
+              </tr>
+              <tr>
+                <td><strong>Lisa Park</strong></td>
+                <td>Vertex Solutions ($85K)</td>
+                <td>Close date pushed to Q3</td>
+                <td>Deal strategy for compelling event</td>
+                <td>$60K</td>
+                <td>6/10</td>
+                <td><span class="badge badge-green">Submitted</span></td>
+              </tr>
+              <tr>
+                <td><strong>Sarah Kim</strong></td>
+                <td colspan="5" style="color:var(--text3);font-style:italic">Not yet submitted — auto-nudge sent 15 min ago</td>
+                <td><span class="badge badge-amber">Pending</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div id="rep-prepare" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Weekly Self-Assessment</div>
+              <div class="card-subtitle">3 questions · takes 2-3 minutes</div>
+            </div>
+            <span class="badge badge-green">Submitted</span>
+          </div>
+          <div style="display:grid;gap:14px">
+            <div style="background:var(--surface2);padding:14px;border-radius:var(--radius-sm)">
+              <div style="font-size:11px;font-weight:600;color:var(--accent-light);margin-bottom:6px">1. TOP DEAL THIS WEEK</div>
+              <div style="font-size:13px">Meridian Corp ($120K) — Negotiation stage. Need to get CFO involved before they finalize vendor shortlist on March 28.</div>
+            </div>
+            <div style="background:var(--surface2);padding:14px;border-radius:var(--radius-sm)">
+              <div style="font-size:11px;font-weight:600;color:var(--red);margin-bottom:6px">2. BIGGEST RISK</div>
+              <div style="font-size:13px">Single-threaded on Meridian — only talking to VP of Ops. If she deprioritizes, deal stalls. Also Nova Healthcare has gone quiet after the demo.</div>
+            </div>
+            <div style="background:var(--surface2);padding:14px;border-radius:var(--radius-sm)">
+              <div style="font-size:11px;font-weight:600;color:var(--amber);margin-bottom:6px">3. WHERE I NEED HELP</div>
+              <div style="font-size:13px">Multi-threading strategy for Meridian — how to get to the CFO without going around my champion. Also need to re-engage Nova.</div>
+            </div>
+          </div>
+          <div style="margin-top:16px;display:flex;gap:8px;align-items:center">
+            <span style="font-size:12px;color:var(--text3)">Weekly commit:</span>
+            <span style="font-size:15px;font-weight:700">$45K</span>
+            <span style="font-size:12px;color:var(--text3);margin-left:16px">Confidence score:</span>
+            <span style="font-size:15px;font-weight:700;color:var(--amber)">6/10</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">My Top 3 Deals — CRM Snapshot</div>
+              <div class="card-subtitle">Auto-pulled from CRM</div>
+            </div>
+          </div>
+          <div class="three-col">
+            <div style="background:var(--surface2);padding:14px;border-radius:var(--radius-sm);border-top:3px solid var(--red)">
+              <div style="font-size:14px;font-weight:700">Meridian Corp</div>
+              <div style="font-size:20px;font-weight:700;margin:6px 0">$120K</div>
+              <div style="font-size:12px;color:var(--text2)">Stage: Negotiation</div>
+              <div style="font-size:12px;color:var(--text2)">Last activity: 12 days ago</div>
+              <div style="font-size:12px;color:var(--red);margin-top:4px">⚠ Single-threaded · Stalled</div>
+            </div>
+            <div style="background:var(--surface2);padding:14px;border-radius:var(--radius-sm);border-top:3px solid var(--amber)">
+              <div style="font-size:14px;font-weight:700">Nova Healthcare</div>
+              <div style="font-size:20px;font-weight:700;margin:6px 0">$65K</div>
+              <div style="font-size:12px;color:var(--text2)">Stage: Discovery</div>
+              <div style="font-size:12px;color:var(--text2)">Last activity: 7 days ago</div>
+              <div style="font-size:12px;color:var(--amber);margin-top:4px">⚠ No activity 7d</div>
+            </div>
+            <div style="background:var(--surface2);padding:14px;border-radius:var(--radius-sm);border-top:3px solid var(--green)">
+              <div style="font-size:14px;font-weight:700">Brightline Media</div>
+              <div style="font-size:20px;font-weight:700;margin:6px 0">$78K</div>
+              <div style="font-size:12px;color:var(--text2)">Stage: Proposal</div>
+              <div style="font-size:12px;color:var(--text2)">Last activity: 3 days ago</div>
+              <div style="font-size:12px;color:var(--green);margin-top:4px">✓ On track</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== UNCOVER ==================== -->
+    <div class="section" id="sec-uncover">
+      <div class="page-header">
+        <div class="breadcrumb">sam.coach <span class="sep">/</span> PULSE <span class="sep">/</span> <span class="current">Uncover</span></div>
+        <h1>U — Uncover</h1>
+        <p>Call coaching, skill diagnosis & voice note delivery — ~60 min</p>
+      </div>
+
+      <div id="leader-uncover">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Call Review Queue</div>
+              <div class="card-subtitle">4 calls flagged for coaching — listen at 2x speed</div>
+            </div>
+            <span class="badge badge-blue">~40 min to review</span>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Rep</th><th>Call</th><th>Duration</th><th>Focus Area</th><th>AI Score</th><th>Talk:Listen</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>Sarah Kim</strong></td>
+                <td>Meridian Corp — Negotiation call</td>
+                <td>28 min</td>
+                <td><span class="badge badge-red">Objection handling</span></td>
+                <td><span style="color:var(--amber);font-weight:700">62/100</span></td>
+                <td>72:28</td>
+                <td><button class="btn btn-sm btn-primary">Review</button></td>
+              </tr>
+              <tr>
+                <td><strong>James Martinez</strong></td>
+                <td>Atlas Industries — Discovery</td>
+                <td>35 min</td>
+                <td><span class="badge badge-amber">Discovery depth</span></td>
+                <td><span style="color:var(--amber);font-weight:700">58/100</span></td>
+                <td>65:35</td>
+                <td><button class="btn btn-sm btn-primary">Review</button></td>
+              </tr>
+              <tr>
+                <td><strong>Lisa Park</strong></td>
+                <td>Vertex Solutions — Close attempt</td>
+                <td>22 min</td>
+                <td><span class="badge badge-amber">Next step clarity</span></td>
+                <td><span style="color:var(--green);font-weight:700">74/100</span></td>
+                <td>55:45</td>
+                <td><button class="btn btn-sm btn-secondary">Queued</button></td>
+              </tr>
+              <tr>
+                <td><strong>Tom Chen</strong></td>
+                <td>Peak Dynamics — Intro call</td>
+                <td>18 min</td>
+                <td><span class="badge badge-blue">Fundamentals</span></td>
+                <td><span style="color:var(--amber);font-weight:700">51/100</span></td>
+                <td>70:30</td>
+                <td><button class="btn btn-sm btn-secondary">Queued</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Voice Note Coaching — Sarah Kim</div>
+              <div class="card-subtitle">Pre-drafted using P-O-Q formula from AI call analysis</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-sm btn-secondary">Edit</button>
+              <button class="btn btn-sm btn-primary">Record & Send</button>
+            </div>
+          </div>
+          <div class="three-col">
+            <div style="background:var(--green-bg);padding:14px;border-radius:var(--radius-sm);border-left:3px solid var(--green)">
+              <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:6px">POSITIVE</div>
+              <div style="font-size:13px">"Sarah, you did a great job handling the initial pushback on timeline. Your reframe to business impact was smooth."</div>
+            </div>
+            <div style="background:var(--amber-bg);padding:14px;border-radius:var(--radius-sm);border-left:3px solid var(--amber)">
+              <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:6px">OBSERVATION</div>
+              <div style="font-size:13px">"At minute 18, when they raised the competitor comparison, you responded with features rather than asking what specifically they liked about the alternative."</div>
+            </div>
+            <div style="background:var(--blue-bg);padding:14px;border-radius:var(--radius-sm);border-left:3px solid var(--blue)">
+              <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:6px">QUESTION</div>
+              <div style="font-size:13px">"What would have happened if you'd asked 'What specifically about their approach appeals to you?' before defending our position?"</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="rep-uncover" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">My Flagged Call</div>
+            <span class="badge badge-green">AI analyzed</span>
+          </div>
+          <div style="background:var(--surface2);padding:16px;border-radius:var(--radius-sm);margin-bottom:16px">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+              <div>
+                <div style="font-size:15px;font-weight:600">Meridian Corp — Negotiation Call</div>
+                <div style="font-size:12px;color:var(--text2)">March 12, 2026 · 28 min · Flagged: min 18, objection handling</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:24px;font-weight:700;color:var(--amber)">62<span style="font-size:14px;color:var(--text3)">/100</span></div>
+                <div style="font-size:11px;color:var(--text3)">AI Score</div>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+              <div><div style="font-size:11px;color:var(--text3)">Talk:Listen</div><div style="font-size:15px;font-weight:600;color:var(--red)">72:28</div></div>
+              <div><div style="font-size:11px;color:var(--text3)">Questions Asked</div><div style="font-size:15px;font-weight:600;color:var(--amber)">4</div></div>
+              <div><div style="font-size:11px;color:var(--text3)">Next Steps</div><div style="font-size:15px;font-weight:600;color:var(--amber)">Weak</div></div>
+              <div><div style="font-size:11px;color:var(--text3)">Objection Handling</div><div style="font-size:15px;font-weight:600;color:var(--red)">Needs work</div></div>
+            </div>
+          </div>
+          <div style="background:var(--surface2);padding:14px;border-radius:var(--radius-sm);border-left:3px solid var(--accent)">
+            <div style="font-size:11px;font-weight:600;color:var(--accent-light);margin-bottom:6px">SELF-COACHING PROMPT</div>
+            <div style="font-size:13px;color:var(--text2);margin-bottom:10px">Before your leader reviews, reflect: <strong style="color:var(--text)">What would you do differently at minute 18?</strong></div>
+            <div style="font-size:13px;color:var(--text);background:var(--surface);padding:10px;border-radius:6px">I should have asked what they liked about the competitor instead of jumping to defend our features. That would have given me intel and shown I'm listening.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== LEAD ==================== -->
+    <div class="section" id="sec-lead">
+      <div class="page-header">
+        <div class="breadcrumb">sam.coach <span class="sep">/</span> PULSE <span class="sep">/</span> <span class="current">Lead</span></div>
+        <h1>L — Lead</h1>
+        <p>Sync 1:1s, deal deep-dives & action management — ~75 min</p>
+      </div>
+
+      <div id="leader-lead">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">1:1 Prep Packet — Sarah Kim</div>
+              <div class="card-subtitle">Auto-generated · Tue 2:00 PM</div>
+            </div>
+            <div style="display:flex;gap:8px">
+              <button class="btn btn-sm btn-secondary">Next rep →</button>
+            </div>
+          </div>
+
+          <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+            <div style="background:var(--surface2);padding:12px;border-radius:var(--radius-sm)">
+              <div style="font-size:10px;color:var(--text3)">Actions last week</div>
+              <div style="font-size:16px;font-weight:700;color:var(--red)">2/4 done</div>
+            </div>
+            <div style="background:var(--surface2);padding:12px;border-radius:var(--radius-sm)">
+              <div style="font-size:10px;color:var(--text3)">Deals progressed</div>
+              <div style="font-size:16px;font-weight:700;color:var(--amber)">1 of 5</div>
+            </div>
+            <div style="background:var(--surface2);padding:12px;border-radius:var(--radius-sm)">
+              <div style="font-size:10px;color:var(--text3)">Call coaching score</div>
+              <div style="font-size:16px;font-weight:700;color:var(--amber)">62/100</div>
+            </div>
+            <div style="background:var(--surface2);padding:12px;border-radius:var(--radius-sm)">
+              <div style="font-size:10px;color:var(--text3)">Confidence</div>
+              <div style="font-size:16px;font-weight:700">—</div>
+              <div style="font-size:10px;color:var(--amber)">Not yet submitted</div>
+            </div>
+          </div>
+
+          <!-- Deal Coaching Canvas -->
+          <div style="margin-bottom:16px">
+            <div style="font-size:13px;font-weight:600;margin-bottom:10px">Deal Coaching Canvas — Meridian Corp ($120K)</div>
+            <div class="canvas-grid">
+              <div class="canvas-cell">
+                <div class="canvas-cell-label">Decision Maker</div>
+                <div class="canvas-cell-value">CFO — Janet Liu <span class="badge badge-red" style="font-size:9px">Not engaged</span></div>
+              </div>
+              <div class="canvas-cell">
+                <div class="canvas-cell-label">Champion</div>
+                <div class="canvas-cell-value">VP Ops — Mike Torres <span class="badge badge-amber" style="font-size:9px">Single thread</span></div>
+              </div>
+              <div class="canvas-cell">
+                <div class="canvas-cell-label">Pain</div>
+                <div class="canvas-cell-value">Manual workflow costing 40 hrs/week across 3 teams</div>
+              </div>
+              <div class="canvas-cell">
+                <div class="canvas-cell-label">Compelling Event</div>
+                <div class="canvas-cell-value" style="color:var(--red)">Vendor shortlist March 28 — 12 days away</div>
+              </div>
+              <div class="canvas-cell">
+                <div class="canvas-cell-label">Competition</div>
+                <div class="canvas-cell-value">Competitor X in late eval · Incumbent contract expires Q2</div>
+              </div>
+              <div class="canvas-cell">
+                <div class="canvas-cell-label">Next Step</div>
+                <div class="canvas-cell-value" style="color:var(--red)">None defined — needs coaching</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:var(--surface2);padding:14px;border-radius:var(--radius-sm)">
+            <div style="font-size:11px;font-weight:700;color:var(--accent-light);margin-bottom:8px">SUGGESTED COACHING QUESTIONS</div>
+            <div style="font-size:13px;color:var(--text);line-height:1.8">
+              1. What's your plan to get to Janet Liu before the March 28 shortlist?<br>
+              2. If Mike Torres can't champion this internally, who else has budget authority?<br>
+              3. What would make Meridian choose us over Competitor X in a side-by-side?
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="rep-lead" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">My 1:1 Prep Brief</div>
+              <div class="card-subtitle">Upcoming: Tuesday 2:00 PM with Roger M.</div>
+            </div>
+          </div>
+          <div style="display:grid;gap:12px">
+            <div style="background:var(--surface2);padding:14px;border-radius:var(--radius-sm)">
+              <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">LAST WEEK'S ACTIONS</div>
+              <div class="checklist-item" style="border:none;padding:4px 0"><div class="check-box checked">✓</div><div class="check-text done" style="font-size:12px">Send ROI analysis to Mike Torres</div></div>
+              <div class="checklist-item" style="border:none;padding:4px 0"><div class="check-box checked">✓</div><div class="check-text done" style="font-size:12px">Research CFO background on LinkedIn</div></div>
+              <div class="checklist-item" style="border:none;padding:4px 0"><div class="check-box"></div><div class="check-text" style="font-size:12px;color:var(--red)">Ask Mike for intro to CFO ← missed</div></div>
+              <div class="checklist-item" style="border:none;padding:4px 0"><div class="check-box"></div><div class="check-text" style="font-size:12px;color:var(--red)">Re-engage Nova Healthcare ← missed</div></div>
+            </div>
+            <div style="background:var(--surface2);padding:14px;border-radius:var(--radius-sm)">
+              <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:6px">CALL COACHING SUMMARY</div>
+              <div style="font-size:13px">Meridian call scored 62/100. Leader feedback: strong rapport building, needs work on competitive objection handling. Committed to asking about competitor appeal before defending.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== SYNC ==================== -->
+    <div class="section" id="sec-sync">
+      <div class="page-header">
+        <div class="breadcrumb">sam.coach <span class="sep">/</span> PULSE <span class="sep">/</span> <span class="current">Sync</span></div>
+        <h1>S — Sync</h1>
+        <p>Team visibility, Pipeline Pulse posts & peer coaching — ~30 min</p>
+      </div>
+
+      <div id="leader-sync">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Pipeline Pulse — Team Summary</div>
+              <div class="card-subtitle">7/8 posts received this week</div>
+            </div>
+            <button class="btn btn-sm btn-primary">Record synthesis video</button>
+          </div>
+          <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+            <div style="background:var(--surface2);padding:12px;border-radius:var(--radius-sm)">
+              <div style="font-size:10px;color:var(--text3)">Team Commit</div>
+              <div style="font-size:18px;font-weight:700">$428K</div>
+              <div style="font-size:11px;color:var(--green)">vs. $400K target</div>
+            </div>
+            <div style="background:var(--surface2);padding:12px;border-radius:var(--radius-sm)">
+              <div style="font-size:10px;color:var(--text3)">Top Risks</div>
+              <div style="font-size:18px;font-weight:700;color:var(--red)">3</div>
+              <div style="font-size:11px;color:var(--text2)">Single-thread, competitor, stall</div>
+            </div>
+            <div style="background:var(--surface2);padding:12px;border-radius:var(--radius-sm)">
+              <div style="font-size:10px;color:var(--text3)">Wins This Week</div>
+              <div style="font-size:18px;font-weight:700;color:var(--green)">2</div>
+              <div style="font-size:11px;color:var(--text2)">David W. + Emma N.</div>
+            </div>
+            <div style="background:var(--surface2);padding:12px;border-radius:var(--radius-sm)">
+              <div style="font-size:10px;color:var(--text3)">Help Requests</div>
+              <div style="font-size:18px;font-weight:700;color:var(--amber)">4</div>
+              <div style="font-size:11px;color:var(--text2)">CFO intros, competitive, pricing</div>
+            </div>
+          </div>
+          <div style="background:var(--surface2);padding:14px;border-radius:var(--radius-sm)">
+            <div style="font-size:11px;font-weight:700;color:var(--accent-light);margin-bottom:8px">AUTO-DRAFTED SYNTHESIS VIDEO TALKING POINTS</div>
+            <div style="font-size:13px;line-height:1.7;color:var(--text2)">
+              <strong style="color:var(--text)">1. Commit status:</strong> We're at $428K against $400K target — solid but concentrated in 3 deals.<br>
+              <strong style="color:var(--text)">2. Wins:</strong> David closed Quantum Labs ($72K) and Emma closed Horizon Tech ($58K) — great execution.<br>
+              <strong style="color:var(--text)">3. Common theme:</strong> Multi-threading is the issue — 3 of our top 5 deals are single-threaded.<br>
+              <strong style="color:var(--text)">4. Priority for next week:</strong> Everyone: map your stakeholders. If you only talk to one person, you don't have a deal.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="rep-sync" style="display:none">
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">My Pipeline Pulse Post</div>
+              <div class="card-subtitle">Wednesday update — auto-drafted from CRM</div>
+            </div>
+            <span class="badge badge-amber">Draft — edit & submit</span>
+          </div>
+          <div style="display:grid;gap:12px">
+            <div style="background:var(--surface2);padding:14px;border-radius:var(--radius-sm)">
+              <div style="font-size:11px;font-weight:700;color:var(--text3);margin-bottom:4px">COMMIT</div>
+              <div style="font-size:15px;font-weight:700">$45K</div>
+            </div>
+            <div style="background:var(--surface2);padding:14px;border-radius:var(--radius-sm)">
+              <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:4px">TOP RISK</div>
+              <div style="font-size:13px">Meridian ($120K) — single-threaded, 12 days stalled. Need CFO access before March 28 shortlist.</div>
+            </div>
+            <div style="background:var(--surface2);padding:14px;border-radius:var(--radius-sm)">
+              <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:4px">WIN / LEARNING</div>
+              <div style="font-size:13px">Brightline Media moved to proposal stage after strong demo. Learning: anchoring on business impact before features made the difference.</div>
+            </div>
+            <div style="background:var(--surface2);padding:14px;border-radius:var(--radius-sm)">
+              <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:4px">HELP NEEDED</div>
+              <div style="font-size:13px">Anyone have a contact at Meridian Corp? Need a warm intro path to the CFO that doesn't go around my champion.</div>
+            </div>
+          </div>
+          <div style="margin-top:14px;display:flex;gap:8px">
+            <button class="btn btn-primary">Submit Post</button>
+            <button class="btn btn-secondary">Edit draft</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== EVALUATE ==================== -->
+    <div class="section" id="sec-evaluate">
+      <div class="page-header">
+        <div class="breadcrumb">sam.coach <span class="sep">/</span> PULSE <span class="sep">/</span> <span class="current">Evaluate</span></div>
+        <h1>E — Evaluate</h1>
+        <p>Measurement, pattern recognition & continuous improvement — ~15 min Friday</p>
+      </div>
+
+      <div id="leader-evaluate">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Win Rate (30d)</div>
+            <div class="stat-value" style="color:var(--green)">34%</div>
+            <div class="stat-change up">↑ 3% from prior month</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Forecast Accuracy</div>
+            <div class="stat-value" style="color:var(--amber)">78%</div>
+            <div class="stat-change up">↑ 5% improving</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Deal Progression</div>
+            <div class="stat-value">62%</div>
+            <div class="stat-change down">↓ 4% from target</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Coaching Cadence</div>
+            <div class="stat-value" style="color:var(--green)">100%</div>
+            <div class="stat-change up">All reps coached this week</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">4-Week Coaching Tracker</div>
+              <div class="card-subtitle">Rolling view of coaching impact per rep</div>
+            </div>
+          </div>
+          <table class="data-table">
+            <thead><tr><th>Rep</th><th>Coaching Focus</th><th>Behavior Change</th><th>Deal Outcomes</th><th>Skill Rating</th><th>Trend</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><strong>Sarah Kim</strong></td>
+                <td>Objection handling</td>
+                <td>Asking 1 more Q per call</td>
+                <td>1 won, 1 stalled</td>
+                <td>5.5/10</td>
+                <td style="font-size:18px">→</td>
+              </tr>
+              <tr>
+                <td><strong>James Martinez</strong></td>
+                <td>Discovery depth</td>
+                <td>Improved Q quality</td>
+                <td>2 progressed</td>
+                <td>6.0/10</td>
+                <td style="font-size:18px;color:var(--green)">↑</td>
+              </tr>
+              <tr>
+                <td><strong>David Wang</strong></td>
+                <td>Enterprise selling (stretch)</td>
+                <td>Multi-threading in 3 deals</td>
+                <td>2 won ($130K)</td>
+                <td>8.5/10</td>
+                <td style="font-size:18px;color:var(--green)">↑</td>
+              </tr>
+              <tr>
+                <td><strong>Tom Chen</strong></td>
+                <td>Fundamentals (ramp)</td>
+                <td>Talk ratio improved 10%</td>
+                <td>1 qualified</td>
+                <td>4.0/10</td>
+                <td style="font-size:18px;color:var(--green)">↑</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div>
+              <div class="card-title">Weekly Reflection</div>
+              <div class="card-subtitle">5 questions to close the week — feeds into next week's Prepare</div>
+            </div>
+          </div>
+          <div style="display:grid;gap:12px">
+            <div style="background:var(--surface2);padding:14px;border-radius:var(--radius-sm)">
+              <div style="font-size:12px;color:var(--text2);margin-bottom:6px">1. Which coaching conversation had the most impact this week?</div>
+              <div style="font-size:13px;background:var(--surface);padding:10px;border-radius:6px;border:1px solid var(--border);color:var(--text3);cursor:text">Type your reflection...</div>
+            </div>
+            <div style="background:var(--surface2);padding:14px;border-radius:var(--radius-sm)">
+              <div style="font-size:12px;color:var(--text2);margin-bottom:6px">2. Which rep needs a different approach next week?</div>
+              <div style="font-size:13px;background:var(--surface);padding:10px;border-radius:6px;border:1px solid var(--border);color:var(--text3);cursor:text">Type your reflection...</div>
+            </div>
+            <div style="background:var(--surface2);padding:14px;border-radius:var(--radius-sm)">
+              <div style="font-size:12px;color:var(--text2);margin-bottom:6px">3. What pattern am I seeing across the team?</div>
+              <div style="font-size:13px;background:var(--surface);padding:10px;border-radius:6px;border:1px solid var(--border);color:var(--text3);cursor:text">Type your reflection...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="rep-evaluate" style="display:none">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">My Win Rate (30d)</div>
+            <div class="stat-value" style="color:var(--amber)">28%</div>
+            <div class="stat-change up">↑ 2% from last month</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Forecast Accuracy</div>
+            <div class="stat-value">72%</div>
+            <div class="stat-change" style="color:var(--text2)">Commit vs. actual</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Actions Completed</div>
+            <div class="stat-value" style="color:var(--green)">85%</div>
+            <div class="stat-change up">↑ 10% from 3 weeks ago</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Talk:Listen Trend</div>
+            <div class="stat-value" style="color:var(--green)">58:42</div>
+            <div class="stat-change up">↑ Was 72:28 four weeks ago</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">My Coaching History</div>
+            <div class="card-subtitle">Last 4 weeks of coaching received</div>
+          </div>
+          <div class="timeline">
+            <div class="timeline-item"><div class="timeline-dot done"></div><div class="timeline-time">Week 12 — Mar 16</div><div class="timeline-text">Focus: Objection handling on Meridian call</div><div class="timeline-sub">Action: Ask about competitor appeal before defending → In progress</div></div>
+            <div class="timeline-item"><div class="timeline-dot done"></div><div class="timeline-time">Week 11 — Mar 9</div><div class="timeline-text">Focus: Next-step clarity on Nova call</div><div class="timeline-sub">Action: Always confirm compelling event before pricing → Implemented</div></div>
+            <div class="timeline-item"><div class="timeline-dot done"></div><div class="timeline-time">Week 10 — Mar 2</div><div class="timeline-text">Focus: Discovery question depth</div><div class="timeline-sub">Action: Ask 2+ follow-up questions per pain point → Improved (4→6 per call)</div></div>
+            <div class="timeline-item"><div class="timeline-dot done"></div><div class="timeline-time">Week 9 — Feb 23</div><div class="timeline-text">Focus: Talk-to-listen ratio (was 75:25)</div><div class="timeline-sub">Action: Pause 3 seconds after prospect speaks → Now 58:42</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== COACHING PLAYS ==================== -->
+    <div class="section" id="sec-coaching-plays">
+      <div class="page-header">
+        <div class="breadcrumb">sam.coach <span class="sep">/</span> <span class="current">Coaching Plays</span></div>
+        <h1>Coaching Plays</h1>
+        <p>Situational coaching playbooks for common deal and rep scenarios</p>
+      </div>
+      <div class="three-col">
+        <div class="card" style="cursor:pointer;border-color:var(--red)">
+          <div style="font-size:11px;font-weight:700;color:var(--red);margin-bottom:6px">DEAL RESCUE</div>
+          <div class="card-title">Stalled Deal Revival</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:6px">When a deal goes dark for 7+ days. Re-engagement sequence with new value angle.</div>
+        </div>
+        <div class="card" style="cursor:pointer;border-color:var(--amber)">
+          <div style="font-size:11px;font-weight:700;color:var(--amber);margin-bottom:6px">SKILL BUILD</div>
+          <div class="card-title">Discovery Depth</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:6px">For reps who stay surface-level. 3-deep question technique with practice scenarios.</div>
+        </div>
+        <div class="card" style="cursor:pointer;border-color:var(--blue)">
+          <div style="font-size:11px;font-weight:700;color:var(--blue);margin-bottom:6px">DEAL STRATEGY</div>
+          <div class="card-title">Multi-Threading</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:6px">Breaking single-thread risk. Champion-led intro playbook + direct outreach templates.</div>
+        </div>
+        <div class="card" style="cursor:pointer;border-color:var(--green)">
+          <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:6px">CONFIDENCE</div>
+          <div class="card-title">Rep in a Slump</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:6px">Rebuilding confidence after lost deals. Focus on process over outcomes for 2 weeks.</div>
+        </div>
+        <div class="card" style="cursor:pointer;border-color:var(--purple)">
+          <div style="font-size:11px;font-weight:700;color:var(--purple);margin-bottom:6px">STRETCH</div>
+          <div class="card-title">Enterprise Expansion</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:6px">For top performers ready for upmarket. Account mapping + executive-level selling.</div>
+        </div>
+        <div class="card" style="cursor:pointer;border-color:var(--accent)">
+          <div style="font-size:11px;font-weight:700;color:var(--accent-light);margin-bottom:6px">ONBOARDING</div>
+          <div class="card-title">New Rep Ramp</div>
+          <div style="font-size:12px;color:var(--text2);margin-top:6px">Week-by-week ramp plan with coaching milestones. Adjusted PULSE cadence for first 90 days.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== KPIs ==================== -->
+    <div class="section" id="sec-kpis">
+      <div class="page-header">
+        <div class="breadcrumb">sam.coach <span class="sep">/</span> <span class="current">KPIs</span></div>
+        <h1>PULSE KPIs</h1>
+        <p>10 key performance indicators across the coaching cycle</p>
+      </div>
+      <div class="two-col">
+        <div class="card">
+          <div style="font-size:11px;font-weight:700;color:var(--accent-light);margin-bottom:12px">LEADING INDICATORS</div>
+          <div style="display:grid;gap:14px">
+            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Pipeline Coverage</span><span style="font-weight:700;color:var(--green)">3.4x</span></div><div class="progress-bar"><div class="progress-fill" style="width:85%;background:var(--green)"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Self-Assessment Completion</span><span style="font-weight:700">75%</span></div><div class="progress-bar"><div class="progress-fill" style="width:75%;background:var(--amber)"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Call Coaching Cadence</span><span style="font-weight:700;color:var(--green)">100%</span></div><div class="progress-bar"><div class="progress-fill" style="width:100%;background:var(--green)"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Action Completion Rate</span><span style="font-weight:700;color:var(--amber)">71%</span></div><div class="progress-bar"><div class="progress-fill" style="width:71%;background:var(--amber)"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Async Response Rate</span><span style="font-weight:700;color:var(--green)">88%</span></div><div class="progress-bar"><div class="progress-fill" style="width:88%;background:var(--green)"></div></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div style="font-size:11px;font-weight:700;color:var(--green);margin-bottom:12px">LAGGING INDICATORS</div>
+          <div style="display:grid;gap:14px">
+            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Deal Progression Rate</span><span style="font-weight:700">62%</span></div><div class="progress-bar"><div class="progress-fill" style="width:62%;background:var(--amber)"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Win Rate</span><span style="font-weight:700;color:var(--green)">34%</span></div><div class="progress-bar"><div class="progress-fill" style="width:68%;background:var(--green)"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Forecast Accuracy</span><span style="font-weight:700;color:var(--amber)">78%</span></div><div class="progress-bar"><div class="progress-fill" style="width:78%;background:var(--amber)"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Attainment Spread</span><span style="font-weight:700">82-128%</span></div><div class="progress-bar"><div class="progress-fill" style="width:70%;background:var(--blue)"></div></div></div>
+            <div><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>Avg Sales Cycle</span><span style="font-weight:700;color:var(--green)">28 days</span></div><div class="progress-bar"><div class="progress-fill" style="width:60%;background:var(--green)"></div></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  let currentRole = 'leader';
+  let currentSection = 'dashboard';
+
+  function switchRole(role) {
+    currentRole = role;
+    document.getElementById('role-leader').classList.toggle('active', role === 'leader');
+    document.getElementById('role-rep').classList.toggle('active', role === 'rep');
+
+    // Update user info
+    if (role === 'leader') {
+      document.getElementById('user-avatar').textContent = 'RM';
+      document.getElementById('user-display-name').textContent = 'Roger M.';
+      document.getElementById('user-display-role').textContent = 'Sales Leader';
+      document.getElementById('dash-title').textContent = 'Weekly Coaching Dashboard';
+      document.getElementById('dash-subtitle').textContent = 'Week of March 16, 2026 — 8 reps managed';
+    } else {
+      document.getElementById('user-avatar').textContent = 'SK';
+      document.getElementById('user-display-name').textContent = 'Sarah K.';
+      document.getElementById('user-display-role').textContent = 'Sales Rep';
+      document.getElementById('dash-title').textContent = 'My Coaching Dashboard';
+      document.getElementById('dash-subtitle').textContent = 'Week of March 16, 2026 — 5 active deals';
+    }
+
+    // Toggle role-specific content
+    const pages = ['dashboard', 'prepare', 'uncover', 'lead', 'sync', 'evaluate'];
+    pages.forEach(page => {
+      const leaderEl = document.getElementById(`leader-${page}`);
+      const repEl = document.getElementById(`rep-${page}`);
+      if (leaderEl) leaderEl.style.display = role === 'leader' ? '' : 'none';
+      if (repEl) repEl.style.display = role === 'rep' ? '' : 'none';
+    });
+
+    // Re-alias for dash
+    const ld = document.getElementById('leader-dash');
+    const rd = document.getElementById('rep-dash');
+    if (ld) ld.style.display = role === 'leader' ? '' : 'none';
+    if (rd) rd.style.display = role === 'rep' ? '' : 'none';
+  }
+
+  function navigate(section) {
+    currentSection = section;
+    // Hide all sections
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    // Show target
+    const target = document.getElementById(`sec-${section}`);
+    if (target) {
+      target.classList.add('active');
+      target.classList.add('animate-in');
+    }
+    // Update nav
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+
+    // Update PULSE flow highlights
+    const phases = ['prepare', 'uncover', 'lead', 'sync', 'evaluate'];
+    document.querySelectorAll('.pulse-step').forEach((step, i) => {
+      step.classList.toggle('active', phases[i] === section);
+    });
+  }
+
+  // Generate voice wave bars
+  const wave = document.getElementById('voice-wave');
+  if (wave) {
+    for (let i = 0; i < 40; i++) {
+      const bar = document.createElement('div');
+      bar.className = 'voice-bar';
+      bar.style.height = (Math.random() * 16 + 4) + 'px';
+      wave.appendChild(bar);
+    }
+  }
+
+  // Checkbox toggling
+  document.querySelectorAll('.check-box').forEach(box => {
+    box.addEventListener('click', function() {
+      this.classList.toggle('checked');
+      this.textContent = this.classList.contains('checked') ? '✓' : '';
+      const text = this.nextElementSibling?.querySelector('.check-text');
+      if (text) text.classList.toggle('done');
+    });
+  });
+</script>
+</body>
+</html>

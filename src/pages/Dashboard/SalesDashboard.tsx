@@ -1,12 +1,15 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/CommonComponents/PageHeader";
 import { KPICard } from "@/components/CommonComponents/KPICard";
 import { mockAEReps, mockDeals, mockTasks, formatCurrency } from "@/data/mock";
+import PulseFlow from "@/components/dashboard/PulseFlow";
 
 export default function SalesCoachingDashboard() {
   const me = mockAEReps[0]?.name ?? "Sales Rep";
   const myDeals = useMemo(() => mockDeals.filter(d => d.owner_name === me), [me]);
   const today = new Date().toLocaleDateString();
+  const navigate = useNavigate();
 
   const pipelineAmt = useMemo(() => myDeals.reduce((sum, d) => sum + d.amount, 0), [myDeals]);
   const weeklyCommitAmt = useMemo(() => myDeals.filter(d => d.forecast_category === "COMMIT").reduce((sum, d) => sum + d.amount, 0), [myDeals]);
@@ -44,12 +47,33 @@ export default function SalesCoachingDashboard() {
   }, [peers]);
 
   return (
-    <div className="h-full bg-white overflow-auto">
-      <PageHeader
-        title="Coaching Dashboard"
-        subtitle="Personal pipeline, coaching insights & weekly progress"
-        titleClassName="text-2xl font-bold text-gray-900"
-      />
+    <div className="h-full bg-white overflow-auto" style={{ scrollbarGutter: 'stable both-edges' }}>
+      <div className="sticky top-0 z-20 bg-white">
+        <PageHeader
+          title="Coaching Dashboard"
+          subtitle="Personal pipeline, coaching insights & weekly progress"
+          titleClassName="text-2xl font-bold text-gray-900"
+          inlineChildren
+        >
+          <div className="flex items-center w-full justify-end gap-8">
+            <div className="flex-shrink-0">
+              <PulseFlow
+                compact
+                completeOnClick
+                initialActiveStep={null}
+                disableActiveHighlight
+                onNavigateToStep={(step) => {
+                  if (step === "prepare") navigate("/sales-prep");
+                  else if (step === "uncover") navigate("/sales-uncover");
+                  else if (step === "lead") navigate("/sales-lead");
+                  else if (step === "sync") navigate("/sales-sync");
+                  else if (step === "evaluate") navigate("/sales-evaluate");
+                }}
+              />
+            </div>
+          </div>
+        </PageHeader>
+      </div>
 
       <div className="px-6 pb-6 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">

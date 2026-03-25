@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/CommonComponents/PageHeader";
 import { mockAEReps, mockDeals, formatCurrency } from "@/data/mock";
 import { KPICard } from "@/components/CommonComponents/KPICard";
@@ -7,8 +8,10 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Star } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import PulseFlow from "@/components/dashboard/PulseFlow";
 
 export default function LeaderLead() {
+  const navigate = useNavigate();
   const [repName, setRepName] = useState<string>(mockAEReps[0]?.name || "Alex Rodriguez");
   const deals = useMemo(() => {
     const list = mockDeals.filter(d => d.owner_name === repName);
@@ -81,33 +84,51 @@ export default function LeaderLead() {
   };
 
   return (
-    <div className="h-full bg-white overflow-auto">
+    <div className="h-full bg-white overflow-auto" style={{ scrollbarGutter: 'stable both-edges' }}>
+      <div className="sticky top-0 z-20 bg-white">
       <PageHeader
         title="L — Lead"
         subtitle="Sync 1:1s, deal deep-dives & action management — ~75 min"
         titleClassName="text-2xl font-bold text-gray-900"
+        inlineChildren
       >
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">Reps</span>
-          <Select value={repName} onValueChange={setRepName}>
-            <SelectTrigger className="w-56 h-8 text-xs bg-white">
-              <SelectValue placeholder="Select Rep" />
-            </SelectTrigger>
-            <SelectContent>
-              {mockAEReps.map(r => (
-                <SelectItem key={r.user_id} value={r.name} className="text-xs hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-foreground">
-                  {r.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {idx === deals.length - 1 && (
-            <Button size="sm" onClick={() => setFeedbackOpen(true)}>
-              360° feedback
-            </Button>
-          )}
+        <div className="flex items-center justify-end gap-8">
+          <div className="flex items-center gap-3">
+            <Select value={repName} onValueChange={setRepName}>
+              <SelectTrigger className="w-56 h-8 text-xs bg-white">
+                <SelectValue placeholder="Select Rep" />
+              </SelectTrigger>
+              <SelectContent>
+                {mockAEReps.map(r => (
+                  <SelectItem key={r.user_id} value={r.name} className="text-xs hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-foreground">
+                    {r.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {idx === deals.length - 1 && (
+              <Button size="sm" onClick={() => setFeedbackOpen(true)}>
+                360° feedback
+              </Button>
+            )}
+          </div>
+          <div className="flex-shrink-0">
+            <PulseFlow
+              compact
+              completeOnClick
+              initialActiveStep="lead"
+              onNavigateToStep={(step) => {
+                if (step === "prepare") navigate("/manager-prep");
+                else if (step === "uncover") navigate("/leader-uncover");
+                else if (step === "lead") navigate("/leader-lead");
+                else if (step === "sync") navigate("/leader-sync");
+                else if (step === "evaluate") navigate("/leader-evaluate");
+              }}
+            />
+          </div>
         </div>
       </PageHeader>
+      </div>
       <div className="px-6 pb-6 space-y-4">
         <div className="rounded-lg border border-border bg-card">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-gray-50">

@@ -1,7 +1,10 @@
 import { PageHeader } from "@/components/CommonComponents/PageHeader";
+import { useNavigate } from "react-router-dom";
 import { mockAEReps, mockDeals, mockTasks, formatCurrency } from "@/data/mock";
+import PulseFlow from "@/components/dashboard/PulseFlow";
 
 export default function SalesSync() {
+  const navigate = useNavigate();
   const me = mockAEReps[0]?.name ?? "Myself";
   const pulseDate = new Date().toLocaleDateString();
   const repDeals = mockDeals.filter(d => d.owner_name === me);
@@ -25,12 +28,32 @@ export default function SalesSync() {
   ].filter(Boolean).join("; ") || "Help Needed: —";
 
   return (
-    <div className="h-full bg-white overflow-auto">
+    <div className="h-full bg-white overflow-auto" style={{ scrollbarGutter: 'stable both-edges' }}>
+      <div className="sticky top-0 z-20 bg-white">
       <PageHeader
         title="S — Sync"
         subtitle="Team visibility, Pipeline Pulse posts & peer coaching — ~30 min"
         titleClassName="text-2xl font-bold text-gray-900"
-      />
+        inlineChildren
+      >
+        <div className="flex items-center w-full justify-end gap-8">
+          <div className="flex-shrink-0">
+            <PulseFlow
+              compact
+              completeOnClick
+              initialActiveStep="sync"
+              onNavigateToStep={(step) => {
+                if (step === "prepare") navigate("/sales-prep");
+                else if (step === "uncover") navigate("/sales-uncover");
+                else if (step === "lead") navigate("/sales-lead");
+                else if (step === "sync") navigate("/sales-sync");
+                else if (step === "evaluate") navigate("/sales-evaluate");
+              }}
+            />
+          </div>
+        </div>
+      </PageHeader>
+      </div>
       <div className="px-6 pb-6 space-y-4">
         <div className="rounded-lg border border-border bg-card">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-gray-50">

@@ -1,9 +1,12 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/CommonComponents/PageHeader";
 import { Badge } from "@/components/ui/badge";
 import { mockAEReps, mockDeals } from "@/data/mock";
+import PulseFlow from "@/components/dashboard/PulseFlow";
 
 export default function SalesLead() {
+  const navigate = useNavigate();
   const me = mockAEReps[0]?.name ?? "Myself";
   const repDeals = useMemo(() => mockDeals.filter(d => d.owner_name === me), [me]);
   const upcomingDeal = useMemo(() => {
@@ -28,12 +31,32 @@ export default function SalesLead() {
   };
 
   return (
-    <div className="h-full bg-white overflow-auto">
+    <div className="h-full bg-white overflow-auto" style={{ scrollbarGutter: 'stable both-edges' }}>
+      <div className="sticky top-0 z-20 bg-white">
       <PageHeader
         title="L — Lead"
         subtitle="Sync 1:1s, deal deep-dives & action management — ~75 min"
         titleClassName="text-2xl font-bold text-gray-900"
-      />
+        inlineChildren
+      >
+        <div className="flex items-center w-full justify-end gap-8">
+          <div className="flex-shrink-0">
+            <PulseFlow
+              compact
+              completeOnClick
+              initialActiveStep="lead"
+              onNavigateToStep={(step) => {
+                if (step === "prepare") navigate("/sales-prep");
+                else if (step === "uncover") navigate("/sales-uncover");
+                else if (step === "lead") navigate("/sales-lead");
+                else if (step === "sync") navigate("/sales-sync");
+                else if (step === "evaluate") navigate("/sales-evaluate");
+              }}
+            />
+          </div>
+        </div>
+      </PageHeader>
+      </div>
       <div className="px-6 pb-6">
         <div className="rounded-lg border border-border bg-card">
           <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-gray-50">

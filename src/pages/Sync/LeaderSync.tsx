@@ -1,8 +1,11 @@
 import { PageHeader } from "@/components/CommonComponents/PageHeader";
+import { useNavigate } from "react-router-dom";
 import { KPICard } from "@/components/CommonComponents/KPICard";
 import { mockDeals, mockAEReps, formatCurrency } from "@/data/mock";
+import PulseFlow from "@/components/dashboard/PulseFlow";
 
 export default function LeaderSync() {
+  const navigate = useNavigate();
   const postsReceived = 5;
   const totalReps = mockAEReps.length;
 
@@ -57,12 +60,32 @@ export default function LeaderSync() {
   ];
 
   return (
-    <div className="h-full bg-white overflow-auto">
+    <div className="h-full bg-white overflow-auto" style={{ scrollbarGutter: 'stable both-edges' }}>
+      <div className="sticky top-0 z-20 bg-white">
       <PageHeader
         title="S — Sync"
         subtitle="Team visibility, Pipeline Pulse posts & peer coaching — ~30 min"
         titleClassName="text-2xl font-bold text-gray-900"
-      />
+        inlineChildren
+      >
+        <div className="flex items-center w-full justify-end gap-8">
+          <div className="flex-shrink-0">
+            <PulseFlow
+              compact
+              completeOnClick
+              initialActiveStep="sync"
+              onNavigateToStep={(step) => {
+                if (step === "prepare") navigate("/manager-prep");
+                else if (step === "uncover") navigate("/leader-uncover");
+                else if (step === "lead") navigate("/leader-lead");
+                else if (step === "sync") navigate("/leader-sync");
+                else if (step === "evaluate") navigate("/leader-evaluate");
+              }}
+            />
+          </div>
+        </div>
+      </PageHeader>
+      </div>
 
       <div className="px-6 pb-6 space-y-4">
         <div className="rounded-lg border border-border bg-card">

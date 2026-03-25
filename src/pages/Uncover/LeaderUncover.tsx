@@ -12,6 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import PulseFlow from "@/components/dashboard/PulseFlow";
 
 type QueueStatus = "review" | "queued";
 
@@ -68,32 +69,50 @@ export default function LeaderUncover() {
   };
 
   return (
-    <div className="h-full bg-white overflow-auto">
+    <div className="h-full bg-white overflow-auto" style={{ scrollbarGutter: 'stable both-edges' }}>
+      <div className="sticky top-0 z-20 bg-white">
       <PageHeader
         title="U — Uncover"
         subtitle="Call coaching, skill diagnosis & voice note delivery — ~60 min"
         titleClassName="text-2xl font-bold text-gray-900"
+        inlineChildren
       >
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">Reps</span>
-          <Select value={repFilter} onValueChange={setRepFilter}>
-            <SelectTrigger className="w-56 h-8 text-xs bg-white">
-              <SelectValue placeholder="All Reps" />
-            </SelectTrigger>
-            <SelectContent>
-              {reps.map(name => (
-                <SelectItem
-                  key={name}
-                  value={name}
-                  className="text-xs hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-foreground"
-                >
-                  {name === "all" ? "All Reps" : name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex items-center justify-end gap-8">
+          <div className="flex items-center gap-3">
+            <Select value={repFilter} onValueChange={setRepFilter}>
+              <SelectTrigger className="w-56 h-8 text-xs bg-white">
+                <SelectValue placeholder="All Reps" />
+              </SelectTrigger>
+              <SelectContent>
+                {reps.map(name => (
+                  <SelectItem
+                    key={name}
+                    value={name}
+                    className="text-xs hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-foreground"
+                  >
+                    {name === "all" ? "All Reps" : name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex-shrink-0">
+            <PulseFlow
+              compact
+              completeOnClick
+              initialActiveStep="uncover"
+              onNavigateToStep={(step) => {
+                if (step === "prepare") navigate("/manager-prep");
+                else if (step === "uncover") navigate("/leader-uncover");
+                else if (step === "lead") navigate("/leader-lead");
+                else if (step === "sync") navigate("/leader-sync");
+                else if (step === "evaluate") navigate("/leader-evaluate");
+              }}
+            />
+          </div>
         </div>
       </PageHeader>
+      </div>
       <div className="px-6 pb-6 space-y-4">
 
         <div className="rounded-lg border border-border bg-card">

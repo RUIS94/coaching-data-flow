@@ -9,9 +9,10 @@ interface KPICardProps {
   trendPositive?: boolean;
   onClick?: () => void;
   note?: string;
+  onNoteClick?: () => void;
 }
 
-export function KPICard({ label, value, secondaryValue, trend, trendLabel, trendPositive, onClick, note }: KPICardProps) {
+export function KPICard({ label, value, secondaryValue, trend, trendLabel, trendPositive, onClick, note, onNoteClick }: KPICardProps) {
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
   const trendColor = trendPositive
     ? 'text-status-green'
@@ -38,7 +39,14 @@ export function KPICard({ label, value, secondaryValue, trend, trendLabel, trend
         </div>
       </div>
       {note ? (
-        <div className="text-xs text-muted-foreground">{note}</div>
+        <div
+          className={`text-xs text-muted-foreground ${onNoteClick ? 'cursor-pointer' : ''}`}
+          onClick={onNoteClick}
+          role={onNoteClick ? 'button' as const : undefined}
+          tabIndex={onNoteClick ? 0 : undefined}
+        >
+          {note}
+        </div>
       ) : trend ? (
         <div className={`flex items-center gap-1 text-xs ${trendColor}`}>
           <TrendIcon className="h-3 w-3" />
