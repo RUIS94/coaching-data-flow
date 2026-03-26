@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pulse OS</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#fafafa;--surface:#fff;--surface-hover:#f5f5f5;
+  --border:#e5e5e5;--border-light:#f0f0f0;
+  --text:#171717;--text2:#737373;--muted:#a3a3a3;
+  --accent:#171717;--accent-light:#f5f5f5;
+  --green:#22c55e;--green-bg:#f0fdf4;
+  --red:#ef4444;--red-bg:#fef2f2;
+  --yellow:#f59e0b;--yellow-bg:#fffbeb;
+  --blue:#3b82f6;--blue-bg:#eff6ff;
+  --r:8px;--rl:12px;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow-lg:0 4px 12px rgba(0,0,0,.08);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Inter,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;height:100vh;overflow:hidden}
+
+/* === LAYOUT === */
+.app{display:grid;grid-template-columns:220px 1fr;grid-template-rows:56px 1fr;height:100vh}
+
+/* === TOPBAR === */
+.topbar{grid-column:1/-1;display:flex;align-items:center;padding:0 20px;border-bottom:1px solid var(--border);background:var(--surface);z-index:10}
+.logo{font-weight:700;font-size:16px;letter-spacing:-.5px;margin-right:24px;display:flex;align-items:center;gap:8px}
+.logo-icon{width:24px;height:24px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:700}
+.team-sw{padding:6px 12px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;color:var(--text2);cursor:pointer;background:var(--surface)}
+.topbar-spacer{flex:1}
+.search-bar{display:flex;align-items:center;gap:8px;padding:7px 14px;border:1px solid var(--border);border-radius:var(--r);width:320px;color:var(--muted);font-size:13px;background:var(--bg)}
+.search-bar kbd{font-family:inherit;font-size:11px;padding:2px 6px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--muted);margin-left:auto}
+.topbar-actions{display:flex;align-items:center;gap:4px;margin-left:16px}
+.tb-btn{width:36px;height:36px;border:none;background:none;border-radius:var(--r);cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text2);position:relative}
+.tb-btn:hover{background:var(--surface-hover)}
+.notif-dot{position:absolute;top:8px;right:8px;width:6px;height:6px;background:var(--red);border-radius:50%}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+
+/* === LEFT RAIL === */
+.rail{background:var(--surface);border-right:1px solid var(--border);padding:16px 12px;overflow-y:auto;display:flex;flex-direction:column}
+.rail-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:0 8px;margin-bottom:6px}
+.rail-section{margin-bottom:20px}
+.rail-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--r);cursor:pointer;color:var(--text2);font-size:13px;font-weight:500;user-select:none}
+.rail-item:hover{background:var(--surface-hover);color:var(--text)}
+.rail-item.active{background:var(--accent-light);color:var(--text)}
+.rail-item svg{width:16px;height:16px;flex-shrink:0;pointer-events:none}
+.rail-item span.badge{margin-left:auto;font-size:11px;padding:1px 6px;border-radius:10px;background:var(--red);color:#fff;font-weight:600}
+.rail-item span.step-n{margin-left:auto;font-size:10px;color:var(--muted);font-weight:600;width:18px;height:18px;border:1.5px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center}
+.rail-item.active span.step-n{background:var(--text);color:#fff;border-color:var(--text)}
+.rail-item.done span.step-n{background:var(--green);color:#fff;border-color:var(--green)}
+.rail-divider{height:1px;background:var(--border-light);margin:8px 8px 16px}
+
+/* === WORKSPACE === */
+.workspace{overflow-y:auto;background:var(--bg)}
+
+/* === PULSE HEADER (workflow steps) === */
+.pulse-hdr{display:flex;align-items:center;padding:14px 32px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5}
+.pulse-hdr.hidden{display:none}
+.ph-step{display:flex;align-items:center;gap:8px;padding:7px 14px;border-radius:var(--r);cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);white-space:nowrap;user-select:none}
+.ph-step:hover{background:var(--surface-hover);color:var(--text2)}
+.ph-step.active{color:var(--text);font-weight:600;background:var(--accent-light)}
+.ph-step.completed{color:var(--green)}
+.ph-step.future{opacity:.55}
+.ph-num{width:20px;height:20px;border-radius:50%;border:1.5px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;flex-shrink:0;pointer-events:none}
+.ph-step.active .ph-num{background:var(--text);color:#fff;border-color:var(--text)}
+.ph-step.completed .ph-num{background:var(--green);color:#fff;border-color:var(--green)}
+.ph-conn{width:20px;height:1px;background:var(--border);flex-shrink:0}
+.ph-context{margin-left:auto;font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px;padding-left:16px;border-left:1px solid var(--border)}
+.ph-context strong{color:var(--text)}
+
+/* === CONTENT === */
+.content{padding:24px 32px}
+
+/* === CARD === */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);overflow:hidden}
+.card-hd{padding:16px 20px;border-bottom:1px solid var(--border-light);display:flex;align-items:center;justify-content:space-between}
+.card-title{font-size:13px;font-weight:600;letter-spacing:-.2px;display:flex;align-items:center;gap:8px}
+.card-body{padding:16px 20px}
+.card-ft{padding:12px 20px;border-top:1px solid var(--border-light);display:flex;gap:8px}
+
+/* === GRIDS === */
+.g{display:grid;gap:16px}
+.g-84{grid-template-columns:2fr 1fr}
+.g-363{grid-template-columns:1fr 2fr 1fr}
+.g-3{grid-template-columns:repeat(3,1fr)}
+.g-2{grid-template-columns:1fr 1fr}
+.g-4{grid-template-columns:repeat(4,1fr)}
+.g-5{grid-template-columns:repeat(5,1fr)}
+
+/* === BUTTONS === */
+.btn{padding:7px 14px;border-radius:var(--r);font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;background:none}
+.btn-p{background:var(--text);color:#fff}.btn-p:hover{opacity:.85}
+.btn-s{background:var(--surface);border-color:var(--border);color:var(--text)}.btn-s:hover{background:var(--surface-hover)}
+.btn-g{color:var(--text2)}.btn-g:hover{background:var(--surface-hover);color:var(--text)}
+.btn-sm{padding:5px 10px;font-size:12px}
+.btn-full{width:100%;justify-content:center}
+
+/* === STATS === */
+.stat-v{font-size:28px;font-weight:700;letter-spacing:-1px;line-height:1.1}
+.stat-l{font-size:12px;color:var(--muted);font-weight:500}
+.stat-up{font-size:12px;font-weight:600;color:var(--green)}
+.stat-dn{font-size:12px;font-weight:600;color:var(--red)}
+
+/* stat card for dashboard */
+.stat-card{text-align:center;padding:20px 16px}
+.stat-card .stat-v{font-size:26px}
+.stat-card .stat-l{margin-bottom:6px}
+
+/* === DEAL ROW === */
+.deal-row{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-light);cursor:pointer}
+.deal-row:last-child{border-bottom:none}
+.deal-row:hover{background:var(--surface-hover);border-radius:var(--r)}
+.deal-name{font-weight:600;font-size:13px}
+.deal-sub{font-size:12px;color:var(--muted)}
+.deal-amt{font-weight:600;font-size:13px;font-variant-numeric:tabular-nums}
+.deal-reason{font-size:12px;color:var(--text2);max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* === TAGS === */
+.tag{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:10px;font-size:11px;font-weight:600}
+.tag-g{background:var(--green-bg);color:#16a34a}
+.tag-r{background:var(--red-bg);color:var(--red)}
+.tag-y{background:var(--yellow-bg);color:#d97706}
+.tag-b{background:var(--blue-bg);color:var(--blue)}
+.tag-n{background:var(--accent-light);color:var(--text2)}
+.risk{font-size:11px;font-weight:600;padding:2px 8px;border-radius:10px}
+.risk-high{background:var(--red-bg);color:var(--red)}
+.risk-medium{background:var(--yellow-bg);color:var(--yellow)}
+.risk-low{background:var(--green-bg);color:var(--green)}
+
+/* === SIDE PANEL === */
+.sp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.15);z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
+.sp-overlay.open{opacity:1;pointer-events:auto}
+.sp-panel{position:fixed;right:0;top:0;bottom:0;width:420px;background:var(--surface);border-left:1px solid var(--border);z-index:101;transform:translateX(100%);transition:transform .25s;box-shadow:var(--shadow-lg);display:flex;flex-direction:column}
+.sp-panel.open{transform:translateX(0)}
+.sp-panel-hd{padding:20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.sp-panel-bd{padding:20px;overflow-y:auto;flex:1}
+.sp-panel-ft{padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:8px}
+
+/* === PROGRESS BAR === */
+.pbar{height:6px;background:var(--border-light);border-radius:3px;overflow:hidden}
+.pfill{height:100%;border-radius:3px;transition:width .5s}
+
+/* === CHECKLIST === */
+.chk{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border-light)}
+.chk:last-child{border-bottom:none}
+.chk-box{width:18px;height:18px;border:1.5px solid var(--border);border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;user-select:none}
+.chk-box:hover{border-color:var(--muted)}
+.chk-box.checked{background:var(--green);border-color:var(--green)}
+.chk-box.checked::after{content:'\\2713';color:#fff;font-size:11px;font-weight:700}
+
+/* === REP === */
+.rep-av{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;flex-shrink:0}
+.rep-av-sm{width:28px;height:28px;font-size:11px}
+
+/* === MISC === */
+.sec-t{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:12px;margin-top:20px}
+.sec-t:first-child{margin-top:0}
+.screen{display:none;animation:fadeIn .2s ease}
+.screen.visible{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.transcript{background:var(--bg);border:1px solid var(--border-light);border-radius:var(--r);padding:14px 16px;font-size:13px;color:var(--text2);line-height:1.6;margin:8px 0}
+.transcript em{font-style:normal;background:var(--yellow-bg);padding:1px 4px;border-radius:3px;color:var(--text)}
+.skill-row{display:flex;align-items:center;gap:12px;padding:6px 0}
+.skill-lbl{font-size:12px;width:100px;color:var(--text2)}
+.skill-bar{flex:1;height:6px;background:var(--border-light);border-radius:3px;overflow:hidden}
+.skill-fill{height:100%;border-radius:3px}
+.skill-sc{font-size:12px;font-weight:600;width:36px;text-align:right}
+.coach-prompt{background:var(--bg);border-left:3px solid var(--text);padding:10px 14px;margin:6px 0;font-size:13px;border-radius:0 var(--r) var(--r) 0}
+.ai-nudge{background:var(--blue-bg);border:1px solid #bfdbfe;border-radius:var(--r);padding:12px 16px;font-size:13px;margin:12px 0;display:flex;align-items:flex-start;gap:10px}
+.insight-card{border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px;background:var(--surface)}
+.insight-card:hover{box-shadow:var(--shadow)}
+.chain{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:12px 0}
+.chain-node{background:var(--accent-light);border:1px solid var(--border);border-radius:var(--r);padding:8px 14px;font-size:12px;font-weight:500}
+.chain-arr{color:var(--muted);font-size:14px}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--text);color:#fff;padding:12px 20px;border-radius:var(--r);font-size:13px;font-weight:500;z-index:200;transform:translateY(80px);opacity:0;transition:all .3s;display:flex;align-items:center;gap:8px}
+.toast.show{transform:translateY(0);opacity:1}
+.modal-ov{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:150;display:none;align-items:center;justify-content:center}
+.modal-ov.open{display:flex}
+.modal{background:var(--surface);border-radius:var(--rl);width:440px;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.modal-hd{padding:20px 24px;border-bottom:1px solid var(--border)}
+.modal-hd h3{font-size:15px;font-weight:600}
+.modal-bd{padding:20px 24px}
+.modal-ft{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+.share-opt{display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:var(--r);margin-bottom:8px;cursor:pointer}
+.share-opt:hover{background:var(--surface-hover);border-color:var(--muted)}
+.share-opt.selected{border-color:var(--text);background:var(--accent-light)}
+.share-icon{width:36px;height:36px;border-radius:var(--r);background:var(--accent-light);display:flex;align-items:center;justify-content:center;font-size:16px}
+.deal-sel{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r);cursor:pointer;border:1px solid transparent}
+.deal-sel:hover{background:var(--surface-hover)}
+.deal-sel.active{background:var(--accent-light);border-color:var(--border)}
+.deal-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sess-hd{background:var(--surface);border:1px solid var(--border);border-radius:var(--rl);padding:20px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
+.sep{width:1px;height:48px;background:var(--border)}
+.mb-16{margin-bottom:16px}
+.mt-16{margin-top:16px}
+
+/* workflow progress mini bar */
+.wf-progress{display:flex;gap:3px;margin-top:12px}
+.wf-dot{height:4px;flex:1;border-radius:2px;background:var(--border-light)}
+.wf-dot.done{background:var(--green)}
+.wf-dot.current{background:var(--text)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ===== TOP BAR ===== -->
+  <header class="topbar">
+    <div class="logo"><div class="logo-icon">P</div>PULSE</div>
+    <button class="team-sw">Apex Revenue Team &#9662;</button>
+    <div class="topbar-spacer"></div>
+    <div class="search-bar">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      Search deals, reps, insights&hellip;
+      <kbd>&#8984;K</kbd>
+    </div>
+    <div class="topbar-actions">
+      <button class="tb-btn"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg><span class="notif-dot"></span></button>
+      <div class="avatar">RK</div>
+    </div>
+  </header>
+
+  <!-- ===== LEFT RAIL ===== -->
+  <nav class="rail" id="rail">
+    <div class="rail-section">
+      <div class="rail-item active" data-nav="dashboard">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+        Dashboard
+      </div>
+    </div>
+    <div class="rail-divider"></div>
+    <div class="rail-section">
+      <div class="rail-label">Pulse Loop</div>
+      <div class="rail-item" data-nav="prioritize">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Prioritize
+        <span class="step-n">1</span>
+      </div>
+      <div class="rail-item" data-nav="uncover">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+        Uncover
+        <span class="step-n">2</span>
+      </div>
+      <div class="rail-item" data-nav="lead">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Lead
+        <span class="step-n">3</span>
+      </div>
+      <div class="rail-item" data-nav="sync">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Sync
+        <span class="step-n">4</span>
+      </div>
+      <div class="rail-item" data-nav="evaluate">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        Evaluate
+        <span class="step-n">5</span>
+      </div>
+    </div>
+    <div class="rail-divider"></div>
+    <div class="rail-section">
+      <div class="rail-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8"/><path d="M12 17v4"/></svg>Deals<span class="badge">12</span></div>
+      <div class="rail-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>Reps</div>
+      <div class="rail-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>Analytics</div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="rail-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</div>
+  </nav>
+
+  <!-- ===== MAIN WORKSPACE ===== -->
+  <main class="workspace">
+    <!-- Pulse workflow header (hidden on Dashboard) -->
+    <div class="pulse-hdr hidden" id="pulseHeader"></div>
+
+    <!-- ===== DASHBOARD ===== -->
+    <div class="screen visible" id="screen-dashboard">
+      <div class="content">
+        <!-- KPI Row -->
+        <div class="g g-5 mb-16" style="margin-bottom:16px" id="dashKpis"></div>
+
+        <div class="g g-84">
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <!-- Active Pulse Loop -->
+            <div class="card">
+              <div class="card-hd"><div class="card-title">&#9889; Active Pulse Loop</div><span style="font-size:12px;color:var(--muted)" id="loopStatus">Not started</span></div>
+              <div class="card-body" id="dashLoopBody">
+                <div style="text-align:center;padding:16px;color:var(--text2)">
+                  <div style="font-size:14px;font-weight:500;margin-bottom:8px">Start a new coaching cycle</div>
+                  <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Pulse will auto-select your highest-impact deals and reps, then guide you through Prioritize &#8594; Uncover &#8594; Lead &#8594; Sync &#8594; Evaluate.</div>
+                  <button class="btn btn-p" id="btnStartLoop">Start Pulse Loop &#8594;</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Top Deals -->
+            <div class="card">
+              <div class="card-hd"><div class="card-title">&#128293; Critical Deals</div><span style="font-size:12px;color:var(--muted)">5 deals &middot; $2.15M at stake</span></div>
+              <div class="card-body" style="padding:8px 20px" id="dashDealList"></div>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <!-- AI Weekly Plan -->
+            <div class="card">
+              <div class="card-hd"><div class="card-title">&#129504; This Week's Plan</div></div>
+              <div class="card-body">
+                <div style="font-size:13px;margin-bottom:12px;color:var(--text2)">AI-prioritized actions based on deal health and rep signals</div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <div style="display:flex;align-items:center;gap:8px"><span class="tag tag-r">Focus</span><span style="font-size:13px">3 deals need intervention</span></div>
+                  <div style="display:flex;align-items:center;gap:8px"><span class="tag tag-y">Coach</span><span style="font-size:13px">2 reps flagged for skill gaps</span></div>
+                  <div style="display:flex;align-items:center;gap:8px"><span class="tag tag-n">Deprioritize</span><span style="font-size:13px">Low-value pipeline noise</span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Rep Risk -->
+            <div class="card">
+              <div class="card-hd"><div class="card-title">&#128100; Rep Risk Signals</div></div>
+              <div class="card-body" style="padding:8px 20px" id="dashRepRisk"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 1. PRIORITIZE (was Scan) ===== -->
+    <div class="screen" id="screen-prioritize">
+      <div class="content">
+        <div class="g g-84">
+          <div class="card">
+            <div class="card-hd"><div class="card-title">&#127919; Select Deals to Focus On</div><span style="font-size:12px;color:var(--muted)">AI has pre-selected 3 high-impact deals</span></div>
+            <div class="card-body" style="padding:8px 20px" id="priorDealList"></div>
+            <div class="card-ft"><button class="btn btn-p btn-sm" id="btnConfirmPriority">Confirm Selection &#8594; Uncover</button></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div class="card">
+              <div class="card-hd"><div class="card-title">&#129504; Why These Deals?</div></div>
+              <div class="card-body" id="priorRationale">
+                <div class="ai-nudge" style="margin:0"><span>&#128161;</span><div style="font-size:13px">These 3 deals represent <strong>$1.19M</strong> in pipeline and have the highest coaching leverage — small interventions here yield outsized results based on historical patterns.</div></div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-hd"><div class="card-title">&#128100; Reps Involved</div></div>
+              <div class="card-body" id="priorReps"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 2. UNCOVER (was Probe) ===== -->
+    <div class="screen" id="screen-uncover">
+      <div class="content">
+        <div class="g g-363">
+          <div class="card" style="align-self:start"><div class="card-hd"><div class="card-title">Deals to Analyze</div></div><div class="card-body" style="padding:8px 12px" id="uncoverDealList"></div></div>
+          <div class="card" id="uncoverCanvas">
+            <div class="card-hd"><div class="card-title" id="uncoverTitle">-</div><span class="tag" id="uncoverRisk">-</span></div>
+            <div class="card-body">
+              <div class="sec-t">&#128680; Why At Risk</div><div id="uncoverRisks"></div>
+              <div class="sec-t">&#128222; Evidence</div><div class="transcript" id="uncoverEvidence"></div>
+              <div class="sec-t">&#129504; Skill Gaps</div><div id="uncoverSkills"></div>
+            </div>
+          </div>
+          <div class="card" style="align-self:start">
+            <div class="card-hd"><div class="card-title">&#127919; Coaching Plan</div></div>
+            <div class="card-body" id="uncoverCoaching"></div>
+            <div class="card-ft"><button class="btn btn-p btn-sm btn-full" id="btnToLead">Confirm Plan &#8594; Lead</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 3. LEAD (was Intervene) ===== -->
+    <div class="screen" id="screen-lead">
+      <div class="content">
+        <div class="sess-hd">
+          <div><div style="font-size:16px;font-weight:600;margin-bottom:4px">Coaching Session</div><div style="font-size:13px;color:var(--text2)" id="sessionMeta">3 deals queued &middot; 2 reps &middot; Est. 25 min</div></div>
+          <div style="display:flex;gap:8px"><button class="btn btn-s btn-sm">Edit Agenda</button><button class="btn btn-p btn-sm" id="btnToSync">Begin Tracking &#8594; Sync</button></div>
+        </div>
+        <div class="g" style="grid-template-columns:2fr 1fr;gap:16px">
+          <div id="leadCards"></div>
+          <div><div class="card" style="position:sticky;top:80px"><div class="card-hd"><div class="card-title">AI Nudges</div></div><div class="card-body">
+            <div class="ai-nudge"><span>&#128161;</span><div><div style="font-weight:500;margin-bottom:4px">Prioritize ACME Corp</div><div style="font-size:12px;color:var(--text2)">Economic buyer still unidentified with 18 days to close. Highest revenue impact if lost.</div></div></div>
+            <div class="ai-nudge"><span>&#128202;</span><div><div style="font-weight:500;margin-bottom:4px">Marcus needs discovery coaching</div><div style="font-size:12px;color:var(--text2)">Last 3 calls show pattern of skipping pain-point exploration. Suggest role-play exercise.</div></div></div>
+            <div class="ai-nudge"><span>&#9200;</span><div><div style="font-weight:500;margin-bottom:4px">NovaTech decision timeline</div><div style="font-size:12px;color:var(--text2)">Board meeting in 10 days. If budget not confirmed by Friday, deal likely pushes to Q3.</div></div></div>
+          </div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== 4. SYNC (was Run) ===== -->
+    <div class="screen" id="screen-sync">
+      <div class="content">
+        <div class="card mb-16" style="margin-bottom:16px">
+          <div class="card-body" style="display:flex;gap:40px;align-items:center;padding:20px 24px">
+            <div><div class="stat-l">Execution Score</div><div class="stat-v" id="execScore">58%</div></div>
+            <div style="flex:1">
+              <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;color:var(--muted)">Overall progress</span><span style="font-size:12px;font-weight:600" id="execFrac">11/19 actions</span></div>
+              <div class="pbar" style="height:8px"><div class="pfill" id="execBar" style="width:58%;background:var(--text)"></div></div>
+            </div>
+            <button class="btn btn-p btn-sm" id="btnToEval">Complete Cycle &#8594; Evaluate</button>
+          </div>
+        </div>
+        <div class="g g-2" id="syncRepCards"></div>
+        <div class="card mt-16" style="margin-top:16px"><div class="card-hd"><div class="card-title">Behavioral Signals</div><span style="font-size:12px;color:var(--muted)">Auto-detected from recent calls</span></div><div class="card-body" id="behaviorSignals"></div></div>
+      </div>
+    </div>
+
+    <!-- ===== 5. EVALUATE (merged with Disseminate) ===== -->
+    <div class="screen" id="screen-evaluate">
+      <div class="content">
+        <!-- ROI Metrics -->
+        <div class="g g-3 mb-16" style="margin-bottom:16px">
+          <div class="card"><div class="card-body stat-card"><div class="stat-l">Win Rate Impact</div><div style="font-size:28px;font-weight:700;color:var(--green)">18% &#8594; 27%</div><div class="stat-up">+9 percentage points</div></div></div>
+          <div class="card"><div class="card-body stat-card"><div class="stat-l">Coached Deal Conversion</div><div style="font-size:28px;font-weight:700;color:var(--green)">+22%</div><div class="stat-up">vs. uncoached deals</div></div></div>
+          <div class="card"><div class="card-body stat-card"><div class="stat-l">Revenue Influenced</div><div style="font-size:28px;font-weight:700">$1.2M</div><div class="stat-up">This quarter</div></div></div>
+        </div>
+
+        <div class="g g-2 mb-16" style="margin-bottom:16px">
+          <!-- Rep Impact -->
+          <div class="card"><div class="card-hd"><div class="card-title">Rep Impact</div></div><div class="card-body" id="evalRepImpact"></div></div>
+          <!-- Attribution -->
+          <div class="card"><div class="card-hd"><div class="card-title">Attribution Chain</div><button class="btn btn-g btn-sm" id="btnAttrib">Why did win rate improve? &#8594;</button></div><div class="card-body" id="evalAttribution"><div style="color:var(--muted);font-size:13px;text-align:center;padding:24px">Click above to see the coaching &#8594; behavior &#8594; outcome chain</div></div></div>
+        </div>
+
+        <!-- Disseminate content merged here -->
+        <div class="g g-2">
+          <div>
+            <div class="card mb-16" style="margin-bottom:16px">
+              <div class="card-hd"><div class="card-title">&#127942; Team Insights</div></div>
+              <div class="card-body" id="insightsList"></div>
+            </div>
+          </div>
+          <div>
+            <div class="card mb-16" style="margin-bottom:16px"><div class="card-hd"><div class="card-title">&#129309; Suggested Pairings</div></div><div class="card-body" id="pairings"></div></div>
+            <div class="card"><div class="card-hd"><div class="card-title">&#128203; Coaching Snippets</div><span style="font-size:12px;color:var(--muted)">Ready to share</span></div><div class="card-body" id="snippets"></div></div>
+          </div>
+        </div>
+
+        <div style="text-align:center;padding:24px 0">
+          <button class="btn btn-p" id="btnNewLoop">&#8634; Start New Pulse Loop</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- SIDE PANEL -->
+<div class="sp-overlay" id="panelOverlay"></div>
+<div class="sp-panel" id="sidePanel">
+  <div class="sp-panel-hd"><div style="font-size:15px;font-weight:600" id="panelTitle"></div><button class="btn btn-g" id="btnClosePanel" style="font-size:18px;padding:4px 8px">&#10005;</button></div>
+  <div class="sp-panel-bd" id="panelBody"></div>
+  <div class="sp-panel-ft" id="panelFooter"></div>
+</div>
+
+<!-- SHARE MODAL -->
+<div class="modal-ov" id="shareModal">
+  <div class="modal">
+    <div class="modal-hd"><h3 id="shareTitle">Share Insight</h3></div>
+    <div class="modal-bd" id="shareOptions"></div>
+    <div class="modal-ft"><button class="btn btn-s" id="btnShareCancel">Cancel</button><button class="btn btn-p" id="btnShareConfirm">Share</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ========== DATA ========== */
+var deals = [
+  {id:1,name:"ACME Corp",amount:520000,stage:"Negotiation",risk:"high",rep:"Marcus Chen",repIn:"MC",repC:"#6366f1",reason:"No economic buyer identified",days:18,
+   risks:["No economic buyer identified after 3 meetings","Champion went silent for 2 weeks","Competitor demo scheduled next Tuesday"],
+   evidence:'Call on Mar 12 — Marcus asked about timeline but <em>never explored who signs off on budget</em>. Prospect said "we need to run it by leadership" but no follow-up was scheduled.',
+   skills:{Discovery:38,"Objection Handling":55,"Multi-threading":30,Negotiation:62},
+   coaching:["Ask: \"Beyond yourself, who else needs to approve this investment?\"","Ask: \"What happens to your initiative if no decision is made by Q2?\"","Tactic: Request intro to VP Procurement via LinkedIn mutual"],selected:true},
+  {id:2,name:"NovaTech Solutions",amount:380000,stage:"Discovery",risk:"high",rep:"Jordan Taylor",repIn:"JT",repC:"#f59e0b",reason:"Late-stage stall — no next steps",days:26,
+   risks:["Deal pushed twice — was supposed to close in Feb","Budget not confirmed — pending board approval","No technical validation completed"],
+   evidence:'Mar 18 call — Jordan presented pricing without confirming budget. Prospect: <em>"This looks promising but we need board sign-off first."</em> No board timeline established.',
+   skills:{Discovery:45,"Objection Handling":50,"Multi-threading":40,Negotiation:35},
+   coaching:["Ask: \"When is the next board meeting and can we prep materials?\"","Ask: \"What would make this a no-brainer for the board?\"","Tactic: Offer to join board prep call as subject matter expert"],selected:true},
+  {id:3,name:"Meridian Health",amount:450000,stage:"Evaluation",risk:"medium",rep:"Sarah Kim",repIn:"SK",repC:"#22c55e",reason:"Strong champion but procurement slow",days:34,
+   risks:["Procurement added 2 new vendor requirements last week","Legal review expected to take 3+ weeks","Champion promoted — new role may shift priorities"],
+   evidence:'Sarah has strong rapport with VP of Ops. Last call Mar 20: <em>"We want to move forward, but procurement has new compliance requirements."</em> Sarah immediately looped in legal.',
+   skills:{Discovery:82,"Objection Handling":75,"Multi-threading":88,Negotiation:70},
+   coaching:["Ask procurement: \"What specific documents do you need from us?\"","Tactic: Send compliance pre-check template to accelerate review","Follow up on champion new role — confirm deal is still priority"],selected:false},
+  {id:4,name:"Stratos Analytics",amount:290000,stage:"Proposal",risk:"medium",rep:"Aisha Patel",repIn:"AP",repC:"#ec4899",reason:"Single-threaded — only one contact",days:22,
+   risks:["Only talking to one stakeholder (Dir of Analytics)","No executive sponsor identified","Competitor offering 20% lower price point"],
+   evidence:'Aisha proposal was well-received by Dir of Analytics on Mar 15. But <em>no other stakeholder has been engaged</em>. Risk of deal dying if single contact leaves or deprioritizes.',
+   skills:{Discovery:70,"Objection Handling":65,"Multi-threading":35,Negotiation:72},
+   coaching:["Ask: \"Who else on your team would benefit from seeing a demo?\"","Tactic: Suggest an executive briefing to bring in VP-level sponsor","Prepare ROI one-pager to justify price premium over competitor"],selected:true},
+  {id:5,name:"Pinnacle Retail",amount:510000,stage:"Negotiation",risk:"low",rep:"Sarah Kim",repIn:"SK",repC:"#22c55e",reason:"Strong momentum — verbal commit received",days:12,
+   risks:["Minor: Legal redlines on indemnification clause","Otherwise progressing well — verbal yes from CFO"],
+   evidence:'CFO said on Mar 22: <em>"We are ready to move. Just need legal to finalize."</em> Sarah has weekly check-ins scheduled and backup contact in finance.',
+   skills:{Discovery:85,"Objection Handling":80,"Multi-threading":90,Negotiation:78},
+   coaching:["Confirm: Legal redlines are minor — estimated 5-day turnaround","Tactic: Send case study from similar retail customer","Keep momentum — schedule implementation kickoff tentatively"],selected:false}
+];
+
+var reps = [
+  {name:"Marcus Chen",ini:"MC",c:"#6366f1",done:"2/5",score:40,status:"at-risk",imp:"+9%"},
+  {name:"Jordan Taylor",ini:"JT",c:"#f59e0b",done:"3/5",score:60,status:"watch",imp:"+6%"},
+  {name:"Sarah Kim",ini:"SK",c:"#22c55e",done:"4/4",score:100,status:"strong",imp:"+14%"},
+  {name:"Aisha Patel",ini:"AP",c:"#ec4899",done:"3/4",score:75,status:"watch",imp:"+11%"},
+  {name:"Priya Sharma",ini:"PS",c:"#8b5cf6",done:"5/6",score:83,status:"strong",imp:"+16%"}
+];
+
+var signals = [
+  {sig:"Discovery depth improved on Marcus calls",pos:true,det:"Mar 22 call: asked 3 pain-point questions vs. avg of 0.5"},
+  {sig:"Jordan confirmed budget timeline with NovaTech",pos:true,det:"Board meeting confirmed for Apr 2"},
+  {sig:"Aisha still single-threaded on Stratos",pos:false,det:"No new stakeholders added in 2 weeks"},
+  {sig:"Pricing objection handling improved team-wide",pos:true,det:"Average handle score: 5.6 (up from 4.2)"},
+  {sig:"Marcus skipped follow-up on ACME champion",pos:false,det:"Champion contact not reached since Mar 14"}
+];
+
+var insights = [
+  {title:"Top reps multi-thread early",tag:"tag-g",tagTxt:"Pattern",desc:"Reps who engage 3+ stakeholders before Stage 3 close 2.4x more often. Sarah and Priya consistently do this."},
+  {title:"Weak discovery is the #1 deal killer",tag:"tag-r",tagTxt:"Risk",desc:"68% of lost deals had below-average discovery scores. Most common miss: not identifying economic buyer by Stage 2."},
+  {title:"Pricing objection handling improved 34%",tag:"tag-b",tagTxt:"Trend",desc:"After targeted coaching in weeks 2-4, team pricing objection scores went from 4.2 to 5.6 average."}
+];
+
+/* ========== STATE ========== */
+var WSTAGES = ["prioritize","uncover","lead","sync","evaluate"];
+var WNAMES = {prioritize:"Prioritize",uncover:"Uncover",lead:"Lead",sync:"Sync",evaluate:"Evaluate"};
+var ALL_SCREENS = ["dashboard"].concat(WSTAGES);
+var current = "dashboard";
+var completed = {};
+var visited = {dashboard:true};
+var loopActive = false;
+var uncoverDealIdx = 0;  // index into selectedDeals()
+var checks = {};
+deals.forEach(function(d){checks[d.id]={};});
+var shareType = null;
+
+/* ========== HELPERS ========== */
+function $(id){return document.getElementById(id);}
+function fmt(n){return "$"+(n/1000).toFixed(0)+"K";}
+function riskCls(r){return r==="high"?"risk-high":r==="medium"?"risk-medium":"risk-low";}
+function riskTag(r){return r==="high"?"tag-r":r==="medium"?"tag-y":"tag-g";}
+function statusTag(s){return s==="at-risk"?"tag-r":s==="watch"?"tag-y":"tag-g";}
+function repAv(ini,c,sm){return '<div class="rep-av'+(sm?" rep-av-sm":"")+'" style="background:'+c+'">'+ini+'</div>';}
+function selectedDeals(){return deals.filter(function(d){return d.selected;});}
+function selectedDealAmt(){var t=0;selectedDeals().forEach(function(d){t+=d.amount;});return t;}
+
+function toast(msg){
+  var el=$("toast");el.textContent=msg;el.classList.add("show");
+  setTimeout(function(){el.classList.remove("show");},2500);
+}
+
+/* ========== NAVIGATION ========== */
+function goTo(screen){
+  var pi=WSTAGES.indexOf(current), ni=WSTAGES.indexOf(screen);
+  // mark progress if moving forward in workflow
+  if(pi>=0 && ni>pi){
+    completed[current]=true;
+  }
+  visited[screen]=true;
+  current=screen;
+
+  // show/hide screens
+  document.querySelectorAll(".screen").forEach(function(s){s.classList.remove("visible");});
+  $("screen-"+screen).classList.add("visible");
+
+  // update rail
+  document.querySelectorAll(".rail-item[data-nav]").forEach(function(el){
+    var s=el.getAttribute("data-nav");
+    el.classList.toggle("active",s===screen);
+    el.classList.toggle("done",!!completed[s]);
+  });
+
+  // show/hide pulse header
+  var isWorkflow = WSTAGES.indexOf(screen)!==-1;
+  $("pulseHeader").classList.toggle("hidden",!isWorkflow);
+  if(isWorkflow) renderPulseHeader();
+
+  // render screen content
+  var renderers = {
+    dashboard:renderDashboard,
+    prioritize:renderPrioritize,
+    uncover:renderUncover,
+    lead:renderLead,
+    sync:renderSync,
+    evaluate:renderEvaluate
+  };
+  if(renderers[screen]) renderers[screen]();
+}
+
+/* ========== PULSE HEADER ========== */
+function renderPulseHeader(){
+  var h="";
+  WSTAGES.forEach(function(s,i){
+    var isA=s===current, isC=!!completed[s], isV=!!visited[s];
+    var cls="ph-step";
+    if(isA) cls+=" active"; else if(isC) cls+=" completed"; else if(!isV) cls+=" future";
+    var num=isC?"\u2713":(i+1);
+    h+='<div class="'+cls+'" data-nav="'+s+'"><div class="ph-num">'+num+'</div>'+WNAMES[s]+'</div>';
+    if(i<WSTAGES.length-1) h+='<div class="ph-conn"></div>';
+  });
+  // context label
+  var sd=selectedDeals();
+  if(sd.length>0){
+    h+='<div class="ph-context"><strong>'+sd.length+' deals</strong> &middot; '+fmt(selectedDealAmt())+' at stake</div>';
+  }
+  $("pulseHeader").innerHTML=h;
+}
+
+/* ========== DASHBOARD ========== */
+function renderDashboard(){
+  // KPIs
+  $("dashKpis").innerHTML=
+    '<div class="card"><div class="card-body stat-card"><div class="stat-l">Pipeline Forecast</div><div class="stat-v">$4.8M</div><div class="stat-up">&#8593; 6%</div></div></div>'
+   +'<div class="card"><div class="card-body stat-card"><div class="stat-l">Quarterly Target</div><div class="stat-v">$6.2M</div></div></div>'
+   +'<div class="card"><div class="card-body stat-card"><div class="stat-l">Gap to Close</div><div class="stat-v" style="color:var(--red)">-$1.4M</div></div></div>'
+   +'<div class="card"><div class="card-body stat-card"><div class="stat-l">Coverage Ratio</div><div class="stat-v">1.8x</div><div class="stat-dn">Below 2x</div></div></div>'
+   +'<div class="card"><div class="card-body stat-card"><div class="stat-l">Overall Risk</div><div><span class="tag tag-r" style="font-size:13px">HIGH</span></div></div></div>';
+
+  // Loop status
+  if(loopActive){
+    var ci=WSTAGES.indexOf(current);
+    var stageLabel = WSTAGES.indexOf(current)>=0 ? WNAMES[current] : "In Progress";
+    $("loopStatus").innerHTML='<span class="tag tag-g">Active</span>';
+    var dots="";
+    WSTAGES.forEach(function(s,i){
+      var cls="wf-dot";
+      if(completed[s]) cls+=" done"; else if(s===current) cls+=" current";
+      dots+='<div class="'+cls+'"></div>';
+    });
+    $("dashLoopBody").innerHTML=
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px"><span style="font-size:13px;font-weight:500">Current step: <strong>'+stageLabel+'</strong></span><span style="font-size:12px;color:var(--muted)">'+selectedDeals().length+' deals &middot; '+fmt(selectedDealAmt())+'</span></div>'
+     +'<div class="wf-progress">'+dots+'</div>'
+     +'<div style="margin-top:12px"><button class="btn btn-p btn-sm" data-nav="'+current+'">Resume Loop &#8594;</button></div>';
+  }
+
+  // Deals
+  var h="";
+  deals.forEach(function(d,i){
+    h+='<div class="deal-row" data-deal="'+i+'">'
+      +'<div><div class="deal-name">'+d.name+'</div><div class="deal-sub">'+d.stage+' &middot; '+d.rep+' &middot; '+d.days+'d to close</div></div>'
+      +'<div style="flex:1"></div>'
+      +'<div class="deal-reason">'+d.reason+'</div>'
+      +'<div class="deal-amt">'+fmt(d.amount)+'</div>'
+      +'<span class="risk '+riskCls(d.risk)+'">'+d.risk+'</span>'
+      +'<span style="color:var(--muted);font-size:16px">&#8250;</span></div>';
+  });
+  $("dashDealList").innerHTML=h;
+
+  // Rep risk
+  var rd=[
+    {ini:"MC",c:"#6366f1",name:"Marcus Chen",det:"Discovery scores dropping — avg 3.8/10",tag:"tag-r",tagT:"At Risk"},
+    {ini:"JT",c:"#f59e0b",name:"Jordan Taylor",det:"3 deals slipping past close dates",tag:"tag-y",tagT:"Watch"},
+    {ini:"AP",c:"#ec4899",name:"Aisha Patel",det:"Multi-threading weak on enterprise deals",tag:"tag-y",tagT:"Watch"}
+  ];
+  h="";rd.forEach(function(r){
+    h+='<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-light)">'
+      +repAv(r.ini,r.c)+'<div style="flex:1"><div style="font-weight:600;font-size:13px">'+r.name+'</div><div style="font-size:12px;color:var(--text2)">'+r.det+'</div></div>'
+      +'<span class="tag '+r.tag+'">'+r.tagT+'</span></div>';
+  });
+  $("dashRepRisk").innerHTML=h;
+}
+
+/* ========== 1. PRIORITIZE ========== */
+function renderPrioritize(){
+  var h="";
+  deals.forEach(function(d,i){
+    var sel=d.selected;
+    h+='<div class="deal-row" data-toggle-deal="'+i+'" style="opacity:'+(sel?1:.5)+'">'
+      +'<div class="chk-box'+(sel?" checked":"")+'" style="pointer-events:none"></div>'
+      +'<div><div class="deal-name">'+d.name+'</div><div class="deal-sub">'+d.stage+' &middot; '+d.rep+' &middot; '+d.days+'d to close</div></div>'
+      +'<div style="flex:1"></div>'
+      +'<div class="deal-amt">'+fmt(d.amount)+'</div>'
+      +'<span class="risk '+riskCls(d.risk)+'">'+d.risk+'</span></div>';
+  });
+  $("priorDealList").innerHTML=h;
+
+  // Reps involved
+  var repSet={};
+  selectedDeals().forEach(function(d){repSet[d.rep]={ini:d.repIn,c:d.repC};});
+  h="";
+  Object.keys(repSet).forEach(function(name){
+    var r=repSet[name];
+    h+='<div style="display:flex;align-items:center;gap:10px;padding:8px 0">'+repAv(r.ini,r.c,true)+'<span style="font-size:13px;font-weight:500">'+name+'</span></div>';
+  });
+  $("priorReps").innerHTML=h;
+}
+
+/* ========== 2. UNCOVER ========== */
+function renderUncover(){
+  var sd=selectedDeals();
+  if(sd.length===0) return;
+  if(uncoverDealIdx>=sd.length) uncoverDealIdx=0;
+
+  // deal list
+  var h="";
+  sd.forEach(function(d,i){
+    var dc=d.risk==="high"?"var(--red)":d.risk==="medium"?"var(--yellow)":"var(--green)";
+    h+='<div class="deal-sel'+(uncoverDealIdx===i?" active":"")+'" data-uncover="'+i+'">'
+      +'<div class="deal-dot" style="background:'+dc+'"></div>'
+      +'<div><div style="font-weight:500;font-size:13px">'+d.name+'</div><div style="font-size:11px;color:var(--muted)">'+fmt(d.amount)+' &middot; '+d.risk+' risk</div></div></div>';
+  });
+  $("uncoverDealList").innerHTML=h;
+
+  // canvas
+  var d=sd[uncoverDealIdx];
+  $("uncoverTitle").textContent=d.name+" — "+fmt(d.amount);
+  var rt=$("uncoverRisk");
+  rt.textContent=d.risk.charAt(0).toUpperCase()+d.risk.slice(1)+" Risk";
+  rt.className="tag "+riskTag(d.risk);
+
+  h="";d.risks.forEach(function(r){h+='<div style="font-size:13px;display:flex;align-items:start;gap:8px;padding:2px 0"><span style="color:var(--red)">&#8226;</span>'+r+'</div>';});
+  $("uncoverRisks").innerHTML=h;
+  $("uncoverEvidence").innerHTML=d.evidence;
+
+  h="";
+  Object.keys(d.skills).forEach(function(k){
+    var v=d.skills[k];var c=v<40?"var(--red)":v<60?"var(--yellow)":"var(--green)";
+    h+='<div class="skill-row"><div class="skill-lbl">'+k+'</div><div class="skill-bar"><div class="skill-fill" style="width:'+v+'%;background:'+c+'"></div></div><div class="skill-sc" style="color:'+c+'">'+(v/10).toFixed(1)+'/10</div></div>';
+  });
+  $("uncoverSkills").innerHTML=h;
+
+  h="";d.coaching.forEach(function(c){h+='<div class="coach-prompt">'+c+'</div>';});
+  $("uncoverCoaching").innerHTML=h;
+}
+
+/* ========== 3. LEAD ========== */
+function renderLead(){
+  var sd=selectedDeals();
+  $("sessionMeta").textContent=sd.length+" deals queued &middot; Est. "+sd.length*8+" min";
+  var h="";
+  sd.forEach(function(d){
+    var acts="";
+    d.coaching.forEach(function(c,ai){
+      var ck=checks[d.id][ai];
+      acts+='<div class="chk"><div class="chk-box'+(ck?" checked":"")+'" data-chk="'+d.id+'-'+ai+'"></div>'
+        +'<div><div style="font-size:13px'+(ck?";text-decoration:line-through;color:var(--muted)":"")+'">'+c+'</div>'
+        +'<div style="font-size:11px;color:var(--muted);margin-top:2px">Assigned to '+d.rep+' &middot; Due this week</div></div></div>';
+    });
+    h+='<div class="card" style="margin-bottom:16px"><div class="card-hd"><div class="card-title">'+d.name+' — '+fmt(d.amount)+'</div><span class="tag '+riskTag(d.risk)+'">'+d.risk+'</span></div>'
+      +'<div class="card-body"><div style="font-size:13px;color:var(--text2);margin-bottom:12px"><strong>Problem:</strong> '+d.reason+'</div>'
+      +'<div class="sec-t" style="margin-top:0">Action Plan</div>'+acts+'</div></div>';
+  });
+  $("leadCards").innerHTML=h;
+}
+
+/* ========== 4. SYNC ========== */
+function renderSync(){
+  updateExec();
+  var h="";
+  reps.slice(0,4).forEach(function(r){
+    var st=statusTag(r.status);
+    var bc=r.score>=80?"var(--green)":r.score>=50?"var(--yellow)":"var(--red)";
+    h+='<div class="card"><div class="card-body">'
+      +'<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">'+repAv(r.ini,r.c)
+      +'<div style="flex:1"><div style="font-weight:600;font-size:13px">'+r.name+'</div><div style="font-size:12px;color:var(--muted)">'+r.done+' actions completed</div></div>'
+      +'<span class="tag '+st+'">'+r.status.replace("-"," ")+'</span></div>'
+      +'<div class="pbar" style="margin-bottom:8px"><div class="pfill" style="width:'+r.score+'%;background:'+bc+'"></div></div>'
+      +'<div style="font-size:12px;color:var(--muted);text-align:right">'+r.score+'% execution</div></div></div>';
+  });
+  $("syncRepCards").innerHTML=h;
+
+  h="";
+  signals.forEach(function(b){
+    h+='<div style="display:flex;align-items:start;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-light)">'
+      +'<span style="font-size:16px;flex-shrink:0">'+(b.pos?"\u2705":"\u274C")+'</span>'
+      +'<div><div style="font-weight:500;font-size:13px">'+b.sig+'</div><div style="font-size:12px;color:var(--muted)">'+b.det+'</div></div></div>';
+  });
+  $("behaviorSignals").innerHTML=h;
+}
+
+function updateExec(){
+  var tot=0,done=0;
+  selectedDeals().forEach(function(d){
+    d.coaching.forEach(function(_,ai){tot++;if(checks[d.id][ai])done++;});
+  });
+  var pct=tot?Math.round(done/tot*100):0;
+  var es=$("execScore");if(es)es.textContent=pct+"%";
+  var eb=$("execBar");if(eb)eb.style.width=pct+"%";
+  var ef=$("execFrac");if(ef)ef.textContent=done+"/"+tot+" actions";
+}
+
+/* ========== 5. EVALUATE (+ Disseminate content) ========== */
+function renderEvaluate(){
+  // Rep impact
+  var h="";
+  reps.forEach(function(r){
+    h+='<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border-light)">'
+      +repAv(r.ini,r.c,true)
+      +'<div style="flex:1;font-size:13px;font-weight:500">'+r.name+'</div>'
+      +'<div style="font-size:14px;font-weight:600;color:var(--green)">'+r.imp+'</div></div>';
+  });
+  $("evalRepImpact").innerHTML=h;
+
+  // Insights (from disseminate)
+  h="";
+  insights.forEach(function(ins){
+    h+='<div class="insight-card"><div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:8px">'
+      +'<div style="font-weight:600;font-size:13px">'+ins.title+'</div><span class="tag '+ins.tag+'">'+ins.tagTxt+'</span></div>'
+      +'<div style="font-size:13px;color:var(--text2);margin-bottom:12px">'+ins.desc+'</div>'
+      +'<button class="btn btn-s btn-sm" data-share="'+ins.title+'">Share with team &#8594;</button></div>';
+  });
+  $("insightsList").innerHTML=h;
+
+  // Pairings
+  $("pairings").innerHTML=
+    '<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-light)">'+repAv("SK","#22c55e",true)+'<div style="font-size:13px;flex:1"><strong>Sarah Kim</strong> &#8594; Coach <strong>Marcus Chen</strong></div><span class="tag tag-b">Discovery</span></div>'
+   +'<div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--border-light)">'+repAv("PS","#8b5cf6",true)+'<div style="font-size:13px;flex:1"><strong>Priya Sharma</strong> &#8594; Coach <strong>Jordan Taylor</strong></div><span class="tag tag-b">Negotiation</span></div>'
+   +'<div style="display:flex;align-items:center;gap:12px;padding:12px 0">'+repAv("AP","#ec4899",true)+'<div style="font-size:13px;flex:1"><strong>Aisha Patel</strong> &#8594; Pair with <strong>Sarah Kim</strong></div><span class="tag tag-b">Multi-threading</span></div>';
+
+  // Snippets
+  $("snippets").innerHTML=
+    '<div class="coach-prompt" style="margin-bottom:8px"><div style="font-weight:500;margin-bottom:4px">Multi-threading playbook</div><div style="font-size:12px;color:var(--text2)">How top reps engage 3+ stakeholders before Stage 3</div></div>'
+   +'<div class="coach-prompt" style="margin-bottom:8px"><div style="font-weight:500;margin-bottom:4px">Discovery question framework</div><div style="font-size:12px;color:var(--text2)">5-question sequence for uncovering economic buyer</div></div>'
+   +'<div class="coach-prompt"><div style="font-weight:500;margin-bottom:4px">Pricing objection responses</div><div style="font-size:12px;color:var(--text2)">3 tested rebuttals for "your competitor is cheaper"</div></div>';
+}
+
+/* ========== ATTRIBUTION ========== */
+function showAttribution(){
+  $("evalAttribution").innerHTML=
+    '<div class="chain">'
+    +'<div class="chain-node">&#127919; Coaching<br><span style="font-size:11px;color:var(--muted)">Discovery training for Marcus &amp; Jordan</span></div>'
+    +'<div class="chain-arr">&#8594;</div>'
+    +'<div class="chain-node">&#129504; Behavior Change<br><span style="font-size:11px;color:var(--muted)">+3.2 avg pain-point questions per call</span></div>'
+    +'<div class="chain-arr">&#8594;</div>'
+    +'<div class="chain-node">&#128200; Deal Movement<br><span style="font-size:11px;color:var(--muted)">4 deals advanced from Discovery to Eval</span></div>'
+    +'<div class="chain-arr">&#8594;</div>'
+    +'<div class="chain-node" style="background:var(--green-bg);border-color:#bbf7d0">&#127942; Win Rate +9%<br><span style="font-size:11px;color:#16a34a">$1.2M revenue influenced</span></div>'
+    +'</div>'
+    +'<div class="ai-nudge" style="margin-top:16px"><span>&#128161;</span><div style="font-size:13px">The biggest lever was discovery coaching. Reps who completed all discovery actions had <strong>3.1x higher close rate</strong> than those who didn\'t. Recommend continuing this focus for Q3.</div></div>';
+}
+
+/* ========== SIDE PANEL ========== */
+function openPanel(i){
+  var d=deals[i];
+  $("panelTitle").textContent=d.name;
+  $("panelBody").innerHTML=
+    '<div style="display:flex;gap:24px;margin-bottom:20px">'
+    +'<div><div class="stat-l">Amount</div><div style="font-size:22px;font-weight:700">'+fmt(d.amount)+'</div></div>'
+    +'<div><div class="stat-l">Stage</div><div style="font-size:14px;font-weight:600">'+d.stage+'</div></div>'
+    +'<div><div class="stat-l">Days to Close</div><div style="font-size:14px;font-weight:600">'+d.days+'</div></div></div>'
+    +'<div style="margin-bottom:16px"><span class="risk '+riskCls(d.risk)+'">'+d.risk+' risk</span></div>'
+    +'<div class="sec-t">Risk Reason</div><p style="font-size:13px;color:var(--text2);margin-bottom:16px">'+d.reason+'</p>'
+    +'<div class="sec-t">Rep</div><div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">'+repAv(d.repIn,d.repC,true)+'<span style="font-size:13px;font-weight:500">'+d.rep+'</span></div>'
+    +'<div class="sec-t">Key Risks</div><div>'+d.risks.map(function(r){return '<div style="font-size:13px;color:var(--text2);padding:4px 0;display:flex;gap:8px"><span style="color:var(--red)">&#8226;</span>'+r+'</div>';}).join("")+'</div>';
+
+  $("panelFooter").innerHTML=
+    '<button class="btn btn-p" data-panel-action="uncover" data-idx="'+i+'">Uncover this deal &#8594;</button>'
+   +'<button class="btn btn-s" data-panel-action="select" data-idx="'+i+'">Add to loop</button>';
+
+  $("panelOverlay").classList.add("open");
+  $("sidePanel").classList.add("open");
+}
+function closePanel(){$("panelOverlay").classList.remove("open");$("sidePanel").classList.remove("open");}
+
+/* ========== SHARE MODAL ========== */
+function openShare(title){
+  shareType=null;
+  $("shareTitle").textContent="Share: "+title;
+  $("shareOptions").innerHTML=
+    '<div class="share-opt" data-stype="slack"><div class="share-icon">&#128172;</div><div><div style="font-weight:500;font-size:13px">Slack Message</div><div style="font-size:12px;color:var(--muted)">Post to #sales-coaching channel</div></div></div>'
+   +'<div class="share-opt" data-stype="dashboard"><div class="share-icon">&#128202;</div><div><div style="font-weight:500;font-size:13px">Team Dashboard</div><div style="font-size:12px;color:var(--muted)">Pin to team dashboard as an insight card</div></div></div>'
+   +'<div class="share-opt" data-stype="snippet"><div class="share-icon">&#128206;</div><div><div style="font-weight:500;font-size:13px">Coaching Snippet</div><div style="font-size:12px;color:var(--muted)">Save as reusable coaching material</div></div></div>';
+  $("shareModal").classList.add("open");
+}
+function closeShare(){$("shareModal").classList.remove("open");}
+
+/* ========== EVENT DELEGATION ========== */
+document.addEventListener("click",function(e){
+  var t=e.target;
+
+  // Navigation (rail items, pulse header steps, any data-nav button)
+  var nav=t.closest("[data-nav]");
+  if(nav){
+    var s=nav.getAttribute("data-nav");
+    if(ALL_SCREENS.indexOf(s)!==-1){goTo(s);return;}
+  }
+
+  // Deal row click (dashboard)
+  var dr=t.closest("[data-deal]");
+  if(dr){openPanel(parseInt(dr.getAttribute("data-deal")));return;}
+
+  // Toggle deal selection (prioritize)
+  var td=t.closest("[data-toggle-deal]");
+  if(td){
+    var idx=parseInt(td.getAttribute("data-toggle-deal"));
+    deals[idx].selected=!deals[idx].selected;
+    renderPrioritize();
+    return;
+  }
+
+  // Uncover deal selector
+  var ud=t.closest("[data-uncover]");
+  if(ud){uncoverDealIdx=parseInt(ud.getAttribute("data-uncover"));renderUncover();return;}
+
+  // Checkbox (lead)
+  var cb=t.closest("[data-chk]");
+  if(cb){
+    var parts=cb.getAttribute("data-chk").split("-");
+    var did=parseInt(parts[0]),ai=parseInt(parts[1]);
+    checks[did][ai]=!checks[did][ai];
+    renderLead();updateExec();
+    toast(checks[did][ai]?"\u2713 Action tracked — assigned to rep with reminder":"Action unchecked");
+    return;
+  }
+
+  // Start Pulse Loop
+  if(t.id==="btnStartLoop"||t.closest("#btnStartLoop")){
+    loopActive=true;
+    toast("\u26A1 Pulse Loop started — deals and reps auto-selected");
+    setTimeout(function(){goTo("prioritize");},500);
+    return;
+  }
+
+  // Confirm Priority -> Uncover
+  if(t.id==="btnConfirmPriority"||t.closest("#btnConfirmPriority")){
+    if(selectedDeals().length===0){toast("Select at least one deal");return;}
+    uncoverDealIdx=0;
+    toast("\u2713 "+selectedDeals().length+" deals locked in — analyzing risks");
+    setTimeout(function(){goTo("uncover");},400);
+    return;
+  }
+
+  // Confirm Plan -> Lead
+  if(t.id==="btnToLead"||t.closest("#btnToLead")){
+    toast("\u2713 Coaching plans confirmed — ready to lead sessions");
+    setTimeout(function(){goTo("lead");},400);
+    return;
+  }
+
+  // Begin Tracking -> Sync
+  if(t.id==="btnToSync"||t.closest("#btnToSync")){
+    toast("\u2713 Actions assigned — tracking execution");
+    setTimeout(function(){goTo("sync");},400);
+    return;
+  }
+
+  // Complete Cycle -> Evaluate
+  if(t.id==="btnToEval"||t.closest("#btnToEval")){
+    toast("\u2713 Cycle complete — evaluating coaching impact");
+    setTimeout(function(){goTo("evaluate");},400);
+    return;
+  }
+
+  // Start new loop from Evaluate
+  if(t.id==="btnNewLoop"||t.closest("#btnNewLoop")){
+    // Reset state
+    completed={};visited={dashboard:true};loopActive=false;
+    deals.forEach(function(d){checks[d.id]={};d.selected=(d.risk==="high"||d.risk==="medium"&&d.amount>300000);});
+    toast("\u26A1 New Pulse Loop — refreshing priorities");
+    setTimeout(function(){goTo("dashboard");},400);
+    return;
+  }
+
+  // Attribution
+  if(t.id==="btnAttrib"||t.closest("#btnAttrib")){showAttribution();return;}
+
+  // Panel actions
+  var pa=t.closest("[data-panel-action]");
+  if(pa){
+    var action=pa.getAttribute("data-panel-action");
+    var di=parseInt(pa.getAttribute("data-idx"));
+    closePanel();
+    if(action==="uncover"){
+      deals[di].selected=true;loopActive=true;
+      var sd=selectedDeals();uncoverDealIdx=sd.indexOf(deals[di]);if(uncoverDealIdx<0)uncoverDealIdx=0;
+      goTo("uncover");
+    }else if(action==="select"){
+      deals[di].selected=true;
+      toast("\u2713 "+deals[di].name+" added to Pulse Loop");
+    }
+    return;
+  }
+
+  // Close panel
+  if(t.id==="panelOverlay"||t.id==="btnClosePanel"||t.closest("#btnClosePanel")){closePanel();return;}
+
+  // Share insight
+  var sh=t.closest("[data-share]");
+  if(sh){openShare(sh.getAttribute("data-share"));return;}
+
+  // Share type selection
+  var so=t.closest("[data-stype]");
+  if(so){
+    shareType=so.getAttribute("data-stype");
+    document.querySelectorAll(".share-opt").forEach(function(el){el.classList.remove("selected");});
+    so.classList.add("selected");
+    return;
+  }
+
+  // Share confirm/cancel
+  if(t.id==="btnShareConfirm"||t.closest("#btnShareConfirm")){
+    if(!shareType)return;
+    closeShare();
+    var msgs={slack:"Posted to #sales-coaching on Slack",dashboard:"Pinned to team dashboard",snippet:"Saved as coaching snippet"};
+    toast("\u2713 "+(msgs[shareType]||"Shared"));
+    return;
+  }
+  if(t.id==="btnShareCancel"||t.closest("#btnShareCancel")){closeShare();return;}
+});
+
+/* ========== INIT ========== */
+renderDashboard();
+
+})();
+</script>
+</body>
+</html>
