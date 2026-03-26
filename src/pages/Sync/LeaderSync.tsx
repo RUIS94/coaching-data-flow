@@ -64,7 +64,7 @@ export default function LeaderSync() {
       <div className="sticky top-0 z-20 bg-white">
       <PageHeader
         title="S — Sync"
-        subtitle="Team visibility, Pipeline Pulse posts & peer coaching — ~30 min"
+        subtitle="Team alignment, peer coaching & recalibration — ~30 min"
         titleClassName="text-2xl font-bold text-gray-900"
         inlineChildren
       >

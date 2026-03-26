@@ -88,7 +88,7 @@ export default function LeaderLead() {
       <div className="sticky top-0 z-20 bg-white">
       <PageHeader
         title="L — Lead"
-        subtitle="Sync 1:1s, deal deep-dives & action management — ~75 min"
+        subtitle="1:1 coaching sessions — ~75 min"
         titleClassName="text-2xl font-bold text-gray-900"
         inlineChildren
       >

@@ -33,7 +33,7 @@ export default function LeaderEvaluate() {
       <div className="sticky top-0 z-20 bg-white">
       <PageHeader
         title="E — Evaluate"
-        subtitle="Measurement, pattern recognition & continuous improvement — ~15 min Friday"
+        subtitle="Track, measure & improve — ~15 min Friday"
         titleClassName="text-2xl font-bold text-gray-900"
         inlineChildren
       >
