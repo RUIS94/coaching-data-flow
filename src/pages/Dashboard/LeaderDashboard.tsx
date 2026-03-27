@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Settings, Play, FileDown, AlertCircle, AlertTriangle, CheckCircle, Eye, ChevronLeft, ChevronRight, Filter, X, XCircle, MoreVertical, Star, ArrowUpDown, BookOpen, RefreshCcw } from "lucide-react";
+import { Settings, Play, FileDown, AlertCircle, AlertTriangle, CheckCircle, ChartNoAxesCombined, ChevronLeft, ChevronRight, Filter, X, XCircle, MoreVertical, Star, ArrowUpDown, BookOpen, Eraser, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/CommonComponents/PageHeader";
 import { AskSamPopup } from "@/components/CommonComponents/AskSamPopup";
@@ -760,12 +760,16 @@ function ManagerViewContent() {
         <KPICard
           label={targetLabel}
           value={formatCurrency(targetAmount)}
+          valueIcon={Target}
+          valueIconColor="#605BFF"
           trend="flat"
           trendLabel={trendTextSame}
         />
         <KPICard
           label="Pipeline Forecast"
           value={formatCurrency(commitCurrent)}
+           valueIcon={ChartNoAxesCombined}
+           valueIconColor="#605BFF"
           noteSegments={[
             { text: `coverage ${coverageX.toFixed(1)}x`, tone: coverageTone },
             { text: ' · ', tone: 'muted' },
@@ -775,6 +779,8 @@ function ManagerViewContent() {
         <KPICard
           label="Top Risk"
           value={formatCurrency(atRiskAmtCurrent)}
+          valueIcon={AlertTriangle}
+          valueIconColor="#DC2626"
           secondaryValue={`${atRiskCountCurrent} deals`}
           trend={atRiskDeltaAmt === 0 ? 'flat' : atRiskDeltaAmt > 0 ? 'up' : 'down'}
           trendLabel={atRiskDeltaAmt === 0 ? trendTextSame : `${formatDeltaCurrency(atRiskDeltaAmt)} vs last ${unitLabel}`}
@@ -784,6 +790,8 @@ function ManagerViewContent() {
         <KPICard
           label="Top Deals"
           value={formatCurrency(topDealsAmtCurrent)}
+          valueIcon={Star}
+          valueIconColor="#605BFF"
           secondaryValue={`${topDealsCountCurrent} deals`}
           trend={topDealsDeltaAmt === 0 ? 'flat' : topDealsDeltaAmt > 0 ? 'up' : 'down'}
           trendLabel={topDealsDeltaAmt === 0 ? trendTextSame : `${formatDeltaCurrency(topDealsDeltaAmt)} vs last ${unitLabel}`}
@@ -793,11 +801,15 @@ function ManagerViewContent() {
         <KPICard
           label="Completed Sessions"
           value={`${completedCoachingReps.length}`}
+          valueIcon={BookOpen}
+          valueIconColor="#16A34A"
           note={completedNoteShort}
         />
         <KPICard
           label="Upcoming Sessions"
           value={`${upcomingCoachingReps.length}`}
+          valueIcon={BookOpen}
+          valueIconColor="#FF8E1C"
           note={upcomingNote}
           onNoteClick={() => navigate('/manager-prep')}
         />
@@ -984,35 +996,9 @@ function ManagerViewContent() {
                 }}
                 title="Clear filter"
               >
-                <XCircle className="h-4 w-4 text-muted-foreground" />
+                <Eraser className="h-4 w-4 text-muted-foreground" />
               </button>
-              {(() => {
-                const topValue = currentWindowDeals
-                  .filter(d => d.forecast_category === 'COMMIT' || d.forecast_category === 'BEST_CASE')
-                  .slice()
-                  .sort((a, b) => b.amount - a.amount)
-                  .slice(0, 10);
-                const riskSet = new Set(topRiskAlerts.map(d => d.deal_id));
-                const valueSet = new Set(topValue.map(d => d.deal_id));
-                let rows = currentWindowDeals.slice();
-                if (riskSelected || valueSelected) {
-                  rows = rows.filter(d => (riskSelected && riskSet.has(d.deal_id)) || (valueSelected && valueSet.has(d.deal_id)));
-                }
-                if (companyFilter !== 'all') rows = rows.filter(d => d.account_name === companyFilter);
-                if (repFilter !== 'all') rows = rows.filter(d => d.owner_name === repFilter);
-                if (stageFilter !== 'all') rows = rows.filter(d => d.stage_name === stageFilter);
-                if (priorityFilter !== 'all') rows = rows.filter(d => priorityOf(d) === priorityFilter);
-                const min = amountMin ? Number(amountMin) : undefined;
-                const max = amountMax ? Number(amountMax) : undefined;
-                if (typeof min === 'number' && !Number.isNaN(min)) rows = rows.filter(d => d.amount >= min);
-                if (typeof max === 'number' && !Number.isNaN(max)) rows = rows.filter(d => d.amount <= max);
-                const stake = rows.reduce((s, d) => s + d.amount, 0);
-                return (
-                  <span className="ml-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary/50 text-muted-foreground">
-                    {rows.length} deals · {formatCurrency(stake)} at stake
-                  </span>
-                );
-              })()}
+              {/* Removed deals count & stake badge per request */}
             </div>
           </div>
           <div className="rounded overflow-x-auto">
@@ -1061,56 +1047,59 @@ function ManagerViewContent() {
                         className="border border-border rounded-lg bg-card p-3 hover:bg-gray-50 cursor-pointer"
                         onClick={() => openDeal(d)}
                       >
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="text-sm font-medium text-foreground truncate">{d.account_name} / {d.deal_name}</div>
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className="text-sm font-medium text-foreground truncate">{d.deal_name}</div>
+                              {d.isInLoop && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="h-5 w-5 inline-flex items-center justify-center rounded hover:bg-gray-100" title="In Pulse loop">
+                                      <BookOpen className="h-4 w-4 text-[#FF8E1C]" />
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>In Pulse loop</TooltipContent>
+                                </Tooltip>
+                              )}
+                              {isRisk && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="h-5 w-5 inline-flex items-center justify-center rounded hover:bg-gray-100" title="Top Risk">
+                                      <AlertTriangle className="h-4 w-4 text-status-red" />
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Top Risk</TooltipContent>
+                                </Tooltip>
+                              )}
+                              {isValue && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <div className="h-5 w-5 inline-flex items-center justify-center rounded hover:bg-gray-100" title="Top Value">
+                                      <Star className="h-4 w-4 text-[#605BFF]" />
+                                    </div>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Top Value</TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
+                            <div className="mt-1 text-xs text-muted-foreground truncate">
+                              {d.stage_name} · {d.owner_name} · {dtc >= 0 ? `${dtc}d to close` : `${Math.abs(dtc)}d overdue`}
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            {d.isInLoop && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-gray-100" title="In Pulse loop">
-                                    <BookOpen className="h-4 w-4 text-[#FF8E1C]" />
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>In Pulse loop</TooltipContent>
-                              </Tooltip>
-                            )}
-                            {isRisk && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-gray-100">
-                                    <AlertTriangle className="h-4 w-4 text-status-red" />
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>Top Risk</TooltipContent>
-                              </Tooltip>
-                            )}
-                            {isValue && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-gray-100">
-                                    <Star className="h-4 w-4 text-[#605BFF]" />
-                                  </div>
-                                </TooltipTrigger>
-                                <TooltipContent>Top Value</TooltipContent>
-                              </Tooltip>
-                            )}
-                          </div>
-                        </div>
-                        <div className="mt-2 grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
-                          <div className="flex items-center gap-1"><span className="text-muted-foreground">Amount</span><span className="font-medium text-foreground">{formatCurrency(d.amount)}</span></div>
-                          <div className="flex items-center gap-1"><span className="text-muted-foreground">Rep</span><span className="font-medium text-foreground">{d.owner_name}</span></div>
-                          <div className="flex items-center gap-1"><span className="text-muted-foreground">Stage</span><span className="font-medium text-foreground">{d.stage_name}</span></div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-muted-foreground">To Close</span>
-                            <span className="font-medium text-foreground">{dtc >= 0 ? `in ${dtc} days` : `${Math.abs(dtc)} days overdue`}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <span className="text-muted-foreground">Risk</span>
-                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${d.risk_level === 'RED' ? 'border-status-red text-status-red' : d.risk_level === 'AMBER' ? 'border-status-amber text-status-amber' : 'border-status-green text-status-green'}`}>
-                              {d.risk_level}
+                          <div className="shrink-0 flex items-center gap-2 self-center">
+                            <div className="text-sm font-semibold text-foreground whitespace-nowrap">{formatCurrency(d.amount)}</div>
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap ${
+                                d.risk_level === 'RED'
+                                  ? 'bg-status-red/10 text-status-red'
+                                  : d.risk_level === 'AMBER'
+                                  ? 'bg-status-amber/10 text-status-amber'
+                                  : 'bg-status-green/10 text-status-green'
+                              }`}
+                            >
+                              {d.risk_level === 'RED' ? 'High' : d.risk_level === 'AMBER' ? 'Medium' : 'Low'}
                             </span>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground" />
                           </div>
                         </div>
                       </div>

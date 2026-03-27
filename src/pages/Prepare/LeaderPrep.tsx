@@ -287,9 +287,9 @@ export default function ManagerPrep() {
         >
           <div className="flex items-center w-full justify-end gap-3">
             <Select>
-              <SelectTrigger className="w-56 h-8 text-xs bg-white">
+              {/*<SelectTrigger className="w-56 h-8 text-xs bg-white">
                 <SelectValue placeholder="All Reps" />
-              </SelectTrigger>
+              </SelectTrigger>*/}
               <SelectContent>
                 {reps.map(r => (
                   <SelectItem
@@ -356,6 +356,8 @@ export default function ManagerPrep() {
                   size="sm"
                   onClick={() => {
                     if (selectedDeals.length === 0) return;
+                    const ids = Array.from(selectedDealIds);
+                    localStorage.setItem("uncoverSelectedDealIds", JSON.stringify(ids));
                     showSuccess(`Selected ${selectedDeals.length} deals (${formatCurrency(selectedTotal)}).`);
                     navigate("/leader-uncover");
                   }}

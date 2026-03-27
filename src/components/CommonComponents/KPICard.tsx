@@ -1,8 +1,12 @@
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import type { ComponentType, SVGProps } from "react";
 
 interface KPICardProps {
   label: string;
   value: string;
+  valueColor?: string;
+  valueIcon?: ComponentType<SVGProps<SVGSVGElement>>;
+  valueIconColor?: string;
   secondaryValue?: string;
   trend?: 'up' | 'down' | 'flat';
   trendLabel?: string;
@@ -13,7 +17,7 @@ interface KPICardProps {
   onNoteClick?: () => void;
 }
 
-export function KPICard({ label, value, secondaryValue, trend, trendLabel, trendPositive, onClick, note, noteSegments, onNoteClick }: KPICardProps) {
+export function KPICard({ label, value, valueColor, valueIcon, valueIconColor, secondaryValue, trend, trendLabel, trendPositive, onClick, note, noteSegments, onNoteClick }: KPICardProps) {
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
   const trendColor = trendPositive
     ? 'text-status-green'
@@ -28,6 +32,7 @@ export function KPICard({ label, value, secondaryValue, trend, trendLabel, trend
       : tone === 'red'
       ? 'text-status-red'
       : 'text-muted-foreground';
+  const ValueIcon = valueIcon;
 
   return (
     <div
@@ -37,15 +42,18 @@ export function KPICard({ label, value, secondaryValue, trend, trendLabel, trend
       tabIndex={onClick ? 0 : undefined}
     >
       <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{label}</span>
-      <div className="flex items-baseline">
+      <div className="flex items-center justify-between">
         <div className="relative inline-block pr-12">
-          <span className="text-2xl font-bold tracking-tight text-foreground">{value}</span>
+          <span className="text-2xl font-bold tracking-tight text-foreground" style={valueColor ? { color: valueColor } : undefined}>{value}</span>
           {secondaryValue && (
             <span className="absolute right-0 bottom-0 text-xs leading-none text-muted-foreground">
               {secondaryValue}
             </span>
           )}
         </div>
+        {ValueIcon ? (
+          <ValueIcon className="h-4 w-4" style={valueIconColor ? { color: valueIconColor } : undefined} />
+        ) : null}
       </div>
       {noteSegments && noteSegments.length > 0 ? (
         <div
