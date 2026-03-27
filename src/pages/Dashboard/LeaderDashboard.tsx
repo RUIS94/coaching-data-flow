@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Settings, Play, FileDown, AlertCircle, AlertTriangle, CheckCircle, Eye, ChevronLeft, ChevronRight, Filter, MoreVertical } from "lucide-react";
+import { Settings, Play, FileDown, AlertCircle, AlertTriangle, CheckCircle, Eye, ChevronLeft, ChevronRight, Filter, X, XCircle, MoreVertical, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/CommonComponents/PageHeader";
+import { AskSamPopup } from "@/components/CommonComponents/AskSamPopup";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { KPICard } from "@/components/CommonComponents/KPICard";
 import { DealRow } from "@/components/CommonComponents/DealRow";
 import { StatusDot } from "@/components/CommonComponents/StatusDot";
@@ -11,14 +13,16 @@ import { mockDeals, mockAEReps, mockCalls, formatCurrency, type Deal, type RiskR
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import SalesMethodologyCard from "@/components/Modules/SalesMethodologyCard";
-import PulseFlow from "@/components/dashboard/PulseFlow";
-import BuyerJourneyCard from "@/components/Modules/BuyerJourneyCard";
 import BuyerObjectionsCard from "@/components/Modules/BuyerObjectionsCard";
 import BuyerQuestionsCard from "@/components/Modules/BuyerQuestionsCard";
 import EmptyPopup from "@/components/CommonComponents/EmptyPopup";
 import IndividualView from "@/pages/ManagerDashboard/IndividualView";
 import { useToastContext } from "@/contexts/ToastContext";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
+import { Sheet, SheetContent, SheetHeader as SheetHdr, SheetTitle as SheetTtl, SheetFooter as SheetFtr } from "@/components/ui/sheet";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent as AlertContent, AlertDialogDescription, AlertDialogHeader as AlertHdr, AlertDialogTitle } from "@/components/ui/alert-dialog";
 
 class KpiContentBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; message?: string }> {
   constructor(props: { children: React.ReactNode }) {
@@ -59,6 +63,49 @@ function ManagerViewContent() {
   const [tierOverrides, setTierOverrides] = useState<Record<string, 'sync' | 'async' | 'stretch'>>({});
   const [nudgeTarget, setNudgeTarget] = useState<{ repId: string; name: string } | null>(null);
   const { showSuccess } = useToastContext();
+  const [dealSheetOpen, setDealSheetOpen] = useState(false);
+  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
+  const [pendingRemoveDeal, setPendingRemoveDeal] = useState<Deal | null>(null);
+  const [pulseStarted, setPulseStarted] = useState(false);
+  const [pulseCurrentIdx, setPulseCurrentIdx] = useState(-1);
+  const [pulseCompleted, setPulseCompleted] = useState(false);
+  const stepRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const stepIdToRoute = (id?: string) => {
+    if (!id) return null;
+    if (id === 'prep') return '/manager-prep';
+    if (id.startsWith('uncover')) return '/leader-uncover';
+    if (id === 'lead') return '/leader-lead';
+    if (id === 'sync') return '/leader-sync';
+    if (id === 'eval') return '/leader-evaluate';
+    return null;
+  };
+  const startOrResumePulse = () => {
+    const steps = agendaItems.filter(i => i.included);
+    const go = (id?: string) => {
+      const path = stepIdToRoute(id);
+      if (path) navigate(path);
+    };
+    if (!pulseStarted) {
+      setPulseStarted(true);
+      setPulseCurrentIdx(0);
+      localStorage.setItem('pulse.started', 'true');
+      localStorage.setItem('pulse.currentIdx', '0');
+      localStorage.setItem('pulse.completed', 'false');
+      const id = steps[0]?.id;
+      setTimeout(() => {
+        if (id && stepRefs.current[id]) stepRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 0);
+      go(id);
+    } else {
+      const idx = Math.max(0, pulseCurrentIdx);
+      const id = steps[idx]?.id;
+      setTimeout(() => {
+        if (id && stepRefs.current[id]) stepRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 0);
+      go(id);
+    }
+  };
   type AgendaItem = { id: string; status: 'done' | 'current' | 'pending'; time: string; title: string; sub: string; minutes: number; included: boolean };
   const makeAgendaTemplate = (range: string): AgendaItem[] => [
     { id: 'prep', status: 'done', time: 'MON — Prepare', title: 'Review CRM alerts, self-assessments, tier reps', sub: '6/8 assessments received · 5 CRM alerts flagged', minutes: 30, included: true },
@@ -73,6 +120,39 @@ function ManagerViewContent() {
     setAgendaItems(makeAgendaTemplate(timeRange));
   }, [timeRange]);
   const navigate = useNavigate();
+  useEffect(() => {
+    const started = localStorage.getItem('pulse.started') === 'true';
+    const idxStr = localStorage.getItem('pulse.currentIdx');
+    const idx = idxStr ? parseInt(idxStr, 10) : -1;
+    const comp = localStorage.getItem('pulse.completed') === 'true';
+    setPulseStarted(started);
+    setPulseCurrentIdx(Number.isNaN(idx) ? -1 : idx);
+    setPulseCompleted(comp);
+  }, []);
+  useEffect(() => {
+    localStorage.setItem('pulse.started', String(pulseStarted));
+    localStorage.setItem('pulse.currentIdx', String(pulseCurrentIdx));
+  }, [pulseStarted, pulseCurrentIdx]);
+  useEffect(() => {
+    const syncFromStorage = () => {
+      const started = localStorage.getItem('pulse.started') === 'true';
+      const idxStr = localStorage.getItem('pulse.currentIdx');
+      const idx = idxStr ? parseInt(idxStr, 10) : -1;
+      const comp = localStorage.getItem('pulse.completed') === 'true';
+      setPulseStarted(started);
+      setPulseCurrentIdx(Number.isNaN(idx) ? -1 : idx);
+      setPulseCompleted(comp);
+    };
+    const onVisibility = () => { if (document.visibilityState === 'visible') syncFromStorage(); };
+    window.addEventListener('storage', syncFromStorage);
+    window.addEventListener('focus', syncFromStorage);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('storage', syncFromStorage);
+      window.removeEventListener('focus', syncFromStorage);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, []);
   const topDeals = mockDeals.slice(0, 6);
   const cfg =
     timeRange === "This week"
@@ -164,6 +244,13 @@ function ManagerViewContent() {
   const completedCoachingReps = Array.from(new Set(coachingEligibleCur.filter(d => d.self_assessment_status === 'SUBMITTED').map(d => d.owner_name)));
   const upcomingCoachingReps = Array.from(new Set(coachingEligibleCur.filter(d => d.self_assessment_status === 'PENDING' || d.self_assessment_status === 'TODO').map(d => d.owner_name)));
   const completedNote = (completedCoachingReps.length ? completedCoachingReps.join(', ') : 'No sessions completed') + ' →';
+  const completedNoteShort = (() => {
+    if (!completedCoachingReps.length) return 'No sessions completed →';
+    const maxNames = 1;
+    const names = completedCoachingReps.slice(0, maxNames);
+    const more = completedCoachingReps.length - names.length;
+    return more > 0 ? `${names.join(', ')} +${more} more →` : `${names.join(', ')} →`;
+  })();
   const upcomingNote = (upcomingCoachingReps.length ? upcomingCoachingReps.join(', ') : 'No upcoming sessions') + ' →';
   const worstCaseTopCur = currentWindowDeals
     .filter(d => d.forecast_category === 'COMMIT' && d.risk_level === 'RED')
@@ -270,6 +357,21 @@ function ManagerViewContent() {
       .join('')
       .toUpperCase();
   const targetPerAEAll = Math.round(targetAmount / Math.max(1, mockAEReps.length));
+  const pipelineAmountCurrent = currentWindowDeals
+    .filter(pipelineFilterAll)
+    .reduce((s, d) => s + d.amount, 0);
+  const coverageX = targetAmount > 0 ? pipelineAmountCurrent / targetAmount : 0;
+  const gapToClose = Math.max(0, targetAmount - commitCurrent);
+  const coverageTone: 'green' | 'amber' | 'red' = coverageX >= 3 ? 'green' : coverageX >= 2 ? 'amber' : 'red';
+  const gapTone: 'green' | 'red' = gapToClose > 0 ? 'red' : 'green';
+  const targetLabel =
+    timeRange === 'This week'
+      ? 'Weekly Target'
+      : timeRange === 'This month'
+      ? 'Monthly Target'
+      : timeRange === 'This quarter'
+      ? 'Quarterly Target'
+      : 'Yearly Target';
   const classifyRep = (rep: (typeof mockAEReps)[number]) => {
     if (rep.hygiene_score < 75 || rep.slippage_count >= 2) return 'sync';
     if (rep.hygiene_score >= 85 && rep.slippage_count === 0 && rep.overdue_actions === 0) return 'async';
@@ -482,6 +584,84 @@ function ManagerViewContent() {
     const base = (s ?? '').toString().replace(/_/g, ' ').toLowerCase();
     return base.replace(/(^|\s)\w/g, (m) => m.toUpperCase()) || '—';
   };
+  const daysTo = (close: string) => {
+    const diff = Math.ceil((new Date(close).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    return diff;
+  };
+  const openDeal = (d: Deal) => {
+    setSelectedDeal(d);
+    setDealSheetOpen(true);
+  };
+  const toggleLoopAdd = (d: Deal) => {
+    if (pinnedDealIds.includes(d.deal_id)) {
+      setPendingRemoveDeal(d);
+      setRemoveConfirmOpen(true);
+    } else {
+      setPinnedDealIds(prev => Array.from(new Set([...prev, d.deal_id])));
+      showSuccess(`Successfully added ${d.account_name} / ${d.deal_name} to Pulse loop`);
+    }
+  };
+  const confirmRemove = () => {
+    if (pendingRemoveDeal) {
+      setPinnedDealIds(prev => prev.filter(id => id !== pendingRemoveDeal.deal_id));
+    }
+    setPendingRemoveDeal(null);
+    setRemoveConfirmOpen(false);
+  };
+  const [riskSelected, setRiskSelected] = useState(false);
+  const [valueSelected, setValueSelected] = useState(false);
+  const priorityDealsRef = useRef<HTMLDivElement>(null);
+  const goToPriorityDeals = (filter?: 'risk'|'value') => {
+    if (filter === 'risk') {
+      setRiskSelected(true);
+      setValueSelected(false);
+    } else if (filter === 'value') {
+      setRiskSelected(false);
+      setValueSelected(true);
+    }
+    setTimeout(() => {
+      priorityDealsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 0);
+  };
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [companyFilter, setCompanyFilter] = useState<string>('all');
+  const [repFilter, setRepFilter] = useState<string>('all');
+  const [stageFilter, setStageFilter] = useState<string>('all');
+  const [priorityFilter, setPriorityFilter] = useState<'all'|'P1'|'P2'|'P3'>('all');
+  const [amountMin, setAmountMin] = useState<string>('');
+  const [amountMax, setAmountMax] = useState<string>('');
+  const riskReasonText = (d: Deal) => {
+    const first = d.risk_reasons && d.risk_reasons[0];
+    if (!first) return 'No economic buyer identified';
+    const code = first.code;
+    if (code === 'MISSING_EB') return 'No economic buyer identified';
+    if (code === 'SINGLE_THREADED') return 'Account is single-threaded';
+    if (code === 'NO_MAP') return 'No mutual action plan';
+    if (code === 'STAGE_STUCK') return 'Deal is stuck in current stage';
+    if (code === 'CLOSE_DATE_MOVED') return 'Close date recently moved';
+    if (code === 'NO_NEXT_STEP_DATE') return 'No next step date on record';
+    if (code === 'WEAK_VALUE') return 'Value proposition is weak';
+    if (code === 'COMMIT_AT_RISK') return 'Commit forecast is at risk';
+    if (code === 'LOW_ACTIVITY') return 'Low recent activity';
+    return first.label || 'Key risk identified';
+  };
+  const deriveKeyRisks = (d: Deal) => {
+    const out: string[] = [];
+    if (d.risk_reasons.some(r => r.code === 'MISSING_EB')) {
+      out.push('No economic buyer identified after 3 meetings');
+    }
+    if (d.risk_reasons.some(r => r.code === 'SINGLE_THREADED')) {
+      out.push('Champion went silent for 2 weeks');
+    }
+    if (d.risk_reasons.some(r => r.code === 'CLOSE_DATE_MOVED')) {
+      out.push('Competitor demo scheduled next Tuesday');
+    }
+    if (out.length === 0) {
+      out.push('Champion went silent for 2 weeks');
+      out.push('No economic buyer identified after 3 meetings');
+    }
+    return out.slice(0, 3);
+  };
 
   const tieringHeaderRange =
     timeRange === 'This week'
@@ -502,6 +682,34 @@ function ManagerViewContent() {
       : 'Year';
   const totalAE = mockAEReps.length;
   const headerSubtitle = `${subtitlePeriodWord} of ${targetPeriodLabel} — ${totalAE} reps managed`;
+  const askSamQuestions = [
+    "Which deals are Top Risk this period?",
+    "Show Top Value deals in commit/best case",
+    "Which reps need coaching this week?",
+    "List deals with hygiene gaps",
+    "Who has slippage risk in commit?",
+  ];
+  const askSamAnswer = (q: string) => {
+    const l = q.toLowerCase();
+    if (l.includes("risk")) return `Top Risk: ${attentionQueueDeals.slice(0, 3).map(d => `${d.account_name}/${d.deal_name}`).join(", ") || "—"}`;
+    if (l.includes("value")) {
+      const tv = currentWindowDeals.filter(d => d.forecast_category === 'COMMIT' || d.forecast_category === 'BEST_CASE').slice().sort((a,b)=>b.amount-a.amount).slice(0,3);
+      return `Top Value: ${tv.map(d => `${d.account_name}/${d.deal_name} ${formatCurrency(d.amount)}`).join(", ") || "—"}`;
+    }
+    if (l.includes("coaching")) {
+      const reps = Array.from(new Set(currentWindowDeals.filter(d => d.need_coaching || (Array.isArray(d.help_needed) && d.help_needed.length>0)).map(d => d.owner_name)));
+      return `Reps needing coaching: ${reps.join(", ") || "—"}`;
+    }
+    if (l.includes("hygiene") || l.includes("gap")) {
+      const gaps = currentWindowDeals.filter(isHygieneGap).slice(0,3);
+      return `Hygiene gaps: ${gaps.map(d => `${d.account_name}/${d.deal_name}`).join(", ") || "—"}`;
+    }
+    if (l.includes("slippage")) {
+      const slips = currentWindowDeals.filter(d => Array.isArray(d.risk_reasons) && d.risk_reasons.some(r => r.code === 'CLOSE_DATE_MOVED')).slice(0,3);
+      return `Slippage risk: ${slips.map(d => `${d.account_name}/${d.deal_name}`).join(", ") || "—"}`;
+    }
+    return "I can help summarize Top Risk, Top Value, hygiene gaps, slippage, and coaching priorities for this period.";
+  };
   return (
     <div className="flex flex-col min-h-0 h-full bg-white">
       <div className="flex-1 overflow-y-auto min-h-0" style={{ scrollbarGutter: 'stable both-edges' }}>
@@ -521,26 +729,37 @@ function ManagerViewContent() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex-shrink-0">
-                <PulseFlow
-                  compact
-                  completeOnClick
-                  initialActiveStep={null}
-                  disableActiveHighlight
-                  onNavigateToStep={(step) => {
-                    if (step === 'prepare') {
-                      navigate('/manager-prep');
-                    }
-                  }}
-                />
-              </div>
+              <AskSamPopup
+                questions={askSamQuestions}
+                onGenerateAnswer={askSamAnswer}
+                triggerLabel="Ask Sam"
+                buttonClassName="gap-2 bg-white text-[#FF8E1C] border border-[#FF8E1C] hover:bg-[#FF8E1C] hover:text-white"
+                mode="sheet"
+                sheetSide="right"
+                description="Ask about risky deals, value, hygiene gaps, or coaching priorities"
+              />
             </div>
           </PageHeader>
         </div>
       
 
       {/* KPI Strip */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 px-6 py-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 px-6 py-4">
+        <KPICard
+          label={targetLabel}
+          value={formatCurrency(targetAmount)}
+          trend="flat"
+          trendLabel={trendTextSame}
+        />
+        <KPICard
+          label="Pipeline Forecast"
+          value={formatCurrency(commitCurrent)}
+          noteSegments={[
+            { text: `coverage ${coverageX.toFixed(1)}x`, tone: coverageTone },
+            { text: ' · ', tone: 'muted' },
+            { text: `gap to close ${formatCurrency(gapToClose)}`, tone: gapTone },
+          ]}
+        />
         <KPICard
           label="Top Risk"
           value={formatCurrency(atRiskAmtCurrent)}
@@ -548,6 +767,7 @@ function ManagerViewContent() {
           trend={atRiskDeltaAmt === 0 ? 'flat' : atRiskDeltaAmt > 0 ? 'up' : 'down'}
           trendLabel={atRiskDeltaAmt === 0 ? trendTextSame : `${formatDeltaCurrency(atRiskDeltaAmt)} vs last ${unitLabel}`}
           trendPositive={atRiskDeltaAmt < 0}
+          onClick={() => goToPriorityDeals('risk')}
         />
         <KPICard
           label="Top Deals"
@@ -556,223 +776,536 @@ function ManagerViewContent() {
           trend={topDealsDeltaAmt === 0 ? 'flat' : topDealsDeltaAmt > 0 ? 'up' : 'down'}
           trendLabel={topDealsDeltaAmt === 0 ? trendTextSame : `${formatDeltaCurrency(topDealsDeltaAmt)} vs last ${unitLabel}`}
           trendPositive={topDealsDeltaAmt > 0}
+          onClick={() => goToPriorityDeals('value')}
         />
         <KPICard
-          label="Completed Coaching Sessions"
+          label="Completed Sessions"
           value={`${completedCoachingReps.length}`}
+          note={completedNoteShort}
         />
         <KPICard
-          label="Upcoming Coaching Sessions"
+          label="Upcoming Sessions"
           value={`${upcomingCoachingReps.length}`}
           note={upcomingNote}
           onNoteClick={() => navigate('/manager-prep')}
         />
       </div>
 
-      {/* Coaching Agenda + AE Cards (First Row) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 px-4 sm:px-6 pb-4">
-        {/* Coaching Agenda */}
-        <div className="rounded-lg border border-border bg-card p-4 order-2 lg:order-2 lg:col-span-1">
-          {(() => {
-            const totalMinutes = agendaItems.filter(i => i.included).reduce((s, i) => s + i.minutes, 0);
-            const hours = totalMinutes / 60;
-            const rounded = Math.round(hours * 2) / 2;
-            const period = timeRange === 'This week' ? "This Week's" : timeRange === 'This month' ? "This Month's" : timeRange === 'This quarter' ? "This Quarter's" : "This Year's";
-            return (
-              <>
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <div className="text-sm font-semibold text-foreground">{period} Coaching Agenda</div>
-                    <div className="text-xs text-muted-foreground">Auto-generated from PULSE inputs</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#605BFF]/10 text-[#605BFF]">~{rounded} hrs total</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-xs text-[#605BFF] hover:bg-muted"
-                      onClick={() => setAgendaAdjustOpen(true)}
-                    >
-                      Adjust
-                    </Button>
-                  </div>
-                </div>
-                <div className="relative">
-                  <div className="space-y-3">
-                    {(() => {
-                      const includedItems = agendaItems.filter(i => i.included);
-                      let currentIdx = includedItems.findIndex(i => i.status === 'current');
-                      if (currentIdx === -1) {
-                        for (let k = includedItems.length - 1; k >= 0; k--) {
-                          if (includedItems[k].status === 'done') { currentIdx = k; break; }
-                        }
-                      }
-                      return includedItems.map((i, idx) => {
-                      const dotClass = i.status === 'done' ? 'bg-status-green' : i.status === 'current' ? 'bg-[#605BFF]' : 'bg-muted-foreground/40';
-                      const isFirst = idx === 0;
-                      const isLast = idx === includedItems.length - 1;
-                      const topLineClass = idx <= currentIdx ? 'bg-[#605BFF]' : 'bg-muted/60';
-                      const bottomLineClass = idx < currentIdx ? 'bg-[#605BFF]' : 'bg-muted/60';
-                      return (
-                        <div key={i.id} className="pl-10">
-                          <div className="relative">
-                            {!isFirst && <div className={`absolute left-[-20px] top-[-12px] bottom-1/2 w-0.5 ${topLineClass}`} />}
-                            {!isLast && <div className={`absolute left-[-20px] top-1/2 bottom-[-12px] w-0.5 ${bottomLineClass}`} />}
-                            <div className={`absolute left-[-20px] top-1/2 -translate-x-1/2 -translate-y-1/2 h-3 w-3 rounded-full ring-2 ring-background ${dotClass}`} />
-                            <div className="text-[11px] text-muted-foreground">{i.time} — {i.minutes} min</div>
-                            <div className="text-sm font-medium text-foreground">{i.id === 'uncover1' ? `Review ${flaggedCallsCur} flagged calls at 2x speed` : i.title}</div>
-                            <div className="text-[11px] text-muted-foreground">{i.id === 'prep' ? `${assessmentsSubmittedCur}/${coachingEligibleCur.length} assessments received · ${topRiskAlerts.length} CRM alerts flagged` : i.sub}</div>
-                          </div>
-                        </div>
-                      );});
-                    })()}
-                  </div>
-                </div>
-              </>
-            );
-          })()}
-        </div>
-
-        {/* AE Cards */}
-        <div className="rounded-lg border border-border bg-card p-4 order-1 lg:order-1 lg:col-span-1">
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 px-4 sm:px-6 pb-6">
+        <div className="rounded-lg border border-border bg-card p-4" id="priority-deals-section" ref={priorityDealsRef}>
           <div className="flex items-start justify-between mb-3">
             <div>
-              <h2 className="text-sm font-semibold text-foreground">Rep Tiering {tieringHeaderRange}</h2>
-              <div className="text-xs text-muted-foreground">AI-suggested based on Risk signals + self-assessments</div>
+              <div className="text-sm font-semibold text-foreground">Critical Deals</div>
+              <div className="text-xs text-muted-foreground">Coaching and forecast priorities</div>
             </div>
-            <Button variant="ghost" size="sm" className="text-xs text-[#605BFF] hover:bg-muted" onClick={() => setTierAdjustOpen(true)}>Adjust</Button>
+            <div className="flex items-center gap-2">
+              <span
+                role="button"
+                className={`px-3 py-1 rounded-full text-[12px] font-semibold cursor-pointer ${riskSelected ? 'bg-status-red/10 text-status-red' : 'bg-secondary/50 text-muted-foreground'}`}
+                onClick={() => setRiskSelected(!riskSelected)}
+                title="Filter Top Risk Deals"
+              >
+                Top Risk Deals
+              </span>
+              <span
+                role="button"
+                className={`px-3 py-1 rounded-full text-[12px] font-semibold cursor-pointer ${valueSelected ? 'bg-[#605BFF]/10 text-[#605BFF]' : 'bg-secondary/50 text-muted-foreground'}`}
+                onClick={() => setValueSelected(!valueSelected)}
+                title="Filter Top Value Deals"
+              >
+                Top Value Deals
+              </span>
+              <Popover open={filterOpen} onOpenChange={setFilterOpen}>
+                <PopoverTrigger asChild>
+                  <button type="button" className="h-8 w-8 inline-flex items-center justify-center rounded hover:bg-gray-100" title="Filter">
+                    <Filter className="h-4 w-4 text-[#FF8E1C]" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-3">
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-3 gap-2 items-center">
+                      <div className="text-xs text-muted-foreground col-span-1">Company</div>
+                      <div className="col-span-2">
+                        <Select value={companyFilter} onValueChange={setCompanyFilter}>
+                          <SelectTrigger className="h-8 text-xs bg-white">
+                            <SelectValue placeholder="Company" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Companies</SelectItem>
+                            {Array.from(new Set(currentWindowDeals.map(d => d.account_name))).sort().map(n => (
+                              <SelectItem key={n} value={n}>{n}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 items-center">
+                      <div className="text-xs text-muted-foreground col-span-1">Rep</div>
+                      <div className="col-span-2">
+                        <Select value={repFilter} onValueChange={setRepFilter}>
+                          <SelectTrigger className="h-8 text-xs bg-white">
+                            <SelectValue placeholder="Rep" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Reps</SelectItem>
+                            {Array.from(new Set(currentWindowDeals.map(d => d.owner_name))).sort().map(r => (
+                              <SelectItem key={r} value={r}>{r}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 items-center">
+                      <div className="text-xs text-muted-foreground col-span-1">Deal Stage</div>
+                      <div className="col-span-2">
+                        <Select value={stageFilter} onValueChange={setStageFilter}>
+                          <SelectTrigger className="h-8 text-xs bg-white">
+                            <SelectValue placeholder="Deal Stage" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Stages</SelectItem>
+                            {Array.from(new Set(currentWindowDeals.map(d => d.stage_name))).sort().map(s => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 items-center">
+                      <div className="text-xs text-muted-foreground col-span-1">Priority</div>
+                      <div className="col-span-2">
+                        <Select value={priorityFilter} onValueChange={(v) => setPriorityFilter(v as 'all'|'P1'|'P2'|'P3')}>
+                          <SelectTrigger className="h-8 text-xs bg-white">
+                            <SelectValue placeholder="Priority" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Priorities</SelectItem>
+                            <SelectItem value="P1">P1</SelectItem>
+                            <SelectItem value="P2">P2</SelectItem>
+                            <SelectItem value="P3">P3</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 items-center">
+                      <div className="text-xs text-muted-foreground col-span-1">Min Amount</div>
+                      <div className="col-span-2">
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          value={amountMin}
+                          onChange={(e) => setAmountMin(e.target.value)}
+                          className="h-8 text-xs bg-white"
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 items-center">
+                      <div className="text-xs text-muted-foreground col-span-1">Max Amount</div>
+                      <div className="col-span-2">
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          value={amountMax}
+                          onChange={(e) => setAmountMax(e.target.value)}
+                          className="h-8 text-xs bg-white"
+                          placeholder="1000000"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between pt-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => {
+                          setCompanyFilter('all');
+                          setRepFilter('all');
+                          setStageFilter('all');
+                          setPriorityFilter('all');
+                          setAmountMin('');
+                          setAmountMax('');
+                        }}
+                      >
+                        Reset
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => setFilterOpen(false)}
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <button
+                type="button"
+                className={`h-8 w-8 inline-flex items-center justify-center rounded hover:bg-gray-100 ${!riskSelected && !valueSelected && companyFilter==='all' && repFilter==='all' && stageFilter==='all' && priorityFilter==='all' && !amountMin && !amountMax ? 'opacity-50 cursor-not-allowed' : ''}`}
+                onClick={() => {
+                  setRiskSelected(false);
+                  setValueSelected(false);
+                  setCompanyFilter('all');
+                  setRepFilter('all');
+                  setStageFilter('all');
+                  setPriorityFilter('all');
+                  setAmountMin('');
+                  setAmountMax('');
+                }}
+                title="Clear filter"
+              >
+                <XCircle className="h-4 w-4 text-muted-foreground" />
+              </button>
+              {(() => {
+                const topValue = currentWindowDeals
+                  .filter(d => d.forecast_category === 'COMMIT' || d.forecast_category === 'BEST_CASE')
+                  .slice()
+                  .sort((a, b) => b.amount - a.amount)
+                  .slice(0, 10);
+                const riskSet = new Set(topRiskAlerts.map(d => d.deal_id));
+                const valueSet = new Set(topValue.map(d => d.deal_id));
+                let rows = currentWindowDeals.slice();
+                if (riskSelected || valueSelected) {
+                  rows = rows.filter(d => (riskSelected && riskSet.has(d.deal_id)) || (valueSelected && valueSet.has(d.deal_id)));
+                }
+                if (companyFilter !== 'all') rows = rows.filter(d => d.account_name === companyFilter);
+                if (repFilter !== 'all') rows = rows.filter(d => d.owner_name === repFilter);
+                if (stageFilter !== 'all') rows = rows.filter(d => d.stage_name === stageFilter);
+                if (priorityFilter !== 'all') rows = rows.filter(d => priorityOf(d) === priorityFilter);
+                const min = amountMin ? Number(amountMin) : undefined;
+                const max = amountMax ? Number(amountMax) : undefined;
+                if (typeof min === 'number' && !Number.isNaN(min)) rows = rows.filter(d => d.amount >= min);
+                if (typeof max === 'number' && !Number.isNaN(max)) rows = rows.filter(d => d.amount <= max);
+                const stake = rows.reduce((s, d) => s + d.amount, 0);
+                return (
+                  <span className="ml-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary/50 text-muted-foreground">
+                    {rows.length} deals · {formatCurrency(stake)} at stake
+                  </span>
+                );
+              })()}
+            </div>
           </div>
-          <div className="space-y-6">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wider text-[#605BFF] mb-2">SYNC 1:1 (Priority)</div>
-              <div className="grid grid-cols-1 gap-3">
-                {buckets.sync.map((rep) => {
-                  const ds = currentWindowDeals.filter(d => d.owner_name === rep.name);
-                  const ready = rep.hygiene_score >= 80 && rep.overdue_actions === 0;
-                  const groupLabel = 'Sync';
-                  return (
-                    <div key={rep.user_id} className="rounded-lg bg-muted/40 p-3 flex items-start justify-between cursor-pointer hover:bg-[#605BFF]/10 transition-colors">
-                      <div className="flex items-start gap-3">
-                        <div className="h-9 w-9 rounded-full border flex items-center justify-center text-xs font-semibold">{getInitials(rep.name)}</div>
-                        <div>
-                          <div
-                            className="text-sm font-semibold text-foreground hover:text-[#605BFF] cursor-pointer"
-                            onClick={() => {
-                              if (!ready) navigate(`/manager-prep?repId=${rep.user_id}`);
-                            }}
-                          >
-                            {rep.name}
+          <div className="rounded overflow-x-auto">
+            {(() => {
+              const topValue = currentWindowDeals
+                .filter(d => d.forecast_category === 'COMMIT' || d.forecast_category === 'BEST_CASE')
+                .slice()
+                .sort((a, b) => b.amount - a.amount)
+                .slice(0, 10);
+              const riskSet = new Set(topRiskAlerts.map(d => d.deal_id));
+              const valueSet = new Set(topValue.map(d => d.deal_id));
+              let rows = currentWindowDeals.slice();
+              if (riskSelected || valueSelected) {
+                rows = rows.filter(d => (riskSelected && riskSet.has(d.deal_id)) || (valueSelected && valueSet.has(d.deal_id)));
+              }
+              if (companyFilter !== 'all') rows = rows.filter(d => d.account_name === companyFilter);
+              if (repFilter !== 'all') rows = rows.filter(d => d.owner_name === repFilter);
+              if (stageFilter !== 'all') rows = rows.filter(d => d.stage_name === stageFilter);
+              if (priorityFilter !== 'all') rows = rows.filter(d => priorityOf(d) === priorityFilter);
+              const min = amountMin ? Number(amountMin) : undefined;
+              const max = amountMax ? Number(amountMax) : undefined;
+              if (typeof min === 'number' && !Number.isNaN(min)) rows = rows.filter(d => d.amount >= min);
+              if (typeof max === 'number' && !Number.isNaN(max)) rows = rows.filter(d => d.amount <= max);
+              rows.sort((a, b) => {
+                const ar = riskSet.has(a.deal_id) ? 1 : 0;
+                const br = riskSet.has(b.deal_id) ? 1 : 0;
+                if (ar !== br) return br - ar;
+                return b.amount - a.amount;
+              });
+              const stake = rows.reduce((s, d) => s + d.amount, 0);
+              return (
+                <div className="space-y-2">
+                  {rows.map(d => {
+                    const dtc = daysTo(d.close_date);
+                    const isRisk = riskSet.has(d.deal_id);
+                    const isValue = valueSet.has(d.deal_id);
+                    return (
+                      <div
+                        key={d.deal_id}
+                        className="border border-border rounded-lg bg-card p-3 hover:bg-gray-50 cursor-pointer"
+                        onClick={() => openDeal(d)}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-sm font-medium text-foreground truncate">{d.account_name} / {d.deal_name}</div>
                           </div>
-                          <div className="mt-1 text-[11px] text-muted-foreground">{buildDetails(rep)}</div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            {isRisk && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-gray-100">
+                                    <AlertTriangle className="h-4 w-4 text-status-red" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>Top Risk</TooltipContent>
+                              </Tooltip>
+                            )}
+                            {isValue && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-gray-100">
+                                    <Star className="h-4 w-4 text-[#605BFF]" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>Top Value</TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mt-2 grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+                          <div className="flex items-center gap-1"><span className="text-muted-foreground">Amount</span><span className="font-medium text-foreground">{formatCurrency(d.amount)}</span></div>
+                          <div className="flex items-center gap-1"><span className="text-muted-foreground">Rep</span><span className="font-medium text-foreground">{d.owner_name}</span></div>
+                          <div className="flex items-center gap-1"><span className="text-muted-foreground">Stage</span><span className="font-medium text-foreground">{d.stage_name}</span></div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-muted-foreground">To Close</span>
+                            <span className="font-medium text-foreground">{dtc >= 0 ? `in ${dtc} days` : `${Math.abs(dtc)} days overdue`}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <span className="text-muted-foreground">Risk</span>
+                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${d.risk_level === 'RED' ? 'border-status-red text-status-red' : d.risk_level === 'AMBER' ? 'border-status-amber text-status-amber' : 'border-status-green text-status-green'}`}>
+                              {d.risk_level}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 self-center"
-                        onDoubleClick={() => {
-                          if (!ready) navigate(`/manager-prep?repId=${rep.user_id}`);
-                        }}
+                    );
+                  })}
+                  {(() => {
+                    const topValueCnt = currentWindowDeals.filter(d => d.forecast_category === 'COMMIT' || d.forecast_category === 'BEST_CASE').length;
+                    if (topRiskAlerts.length === 0 && topValueCnt === 0) {
+                      return (
+                        <div className="px-4 py-6 text-center text-muted-foreground border border-dashed rounded-md">No priority deals this period.</div>
+                      );
+                    }
+                    return null;
+                  })()}
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+        <div className="flex flex-col gap-4">
+          <div className="rounded-lg border border-border bg-card p-4">
+            {(() => {
+              const totalMinutes = agendaItems.filter(i => i.included).reduce((s, i) => s + i.minutes, 0);
+              const hours = totalMinutes / 60;
+              const rounded = Math.round(hours * 2) / 2;
+              const period = timeRange === 'This week' ? "This Week's" : timeRange === 'This month' ? "This Month's" : timeRange === 'This quarter' ? "This Quarter's" : "This Year's";
+              return (
+                <>
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <div className="text-sm font-semibold text-foreground">{period} Coaching Agenda</div>
+                      <div className="text-xs text-muted-foreground">AI-prioritized actions based on deal health and rep signals</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-[#605BFF] hover:bg-muted"
+                        onClick={() => setAgendaAdjustOpen(true)}
                       >
-                        <button
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${ready ? 'bg-status-green/10 text-status-green' : 'bg-secondary/50 text-muted-foreground'} hover:opacity-80`}
-                          onClick={() => {
-                            if (ready) return;
-                            setNudgeTarget({ repId: rep.user_id, name: rep.name });
+                        Adjust
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="text-xs bg-[#605BFF] hover:bg-[#4F48E3]"
+                        onClick={startOrResumePulse}
+                      >
+                        {pulseStarted ? 'Resume Pulse Loop' : 'Start Pulse Loop'}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="mb-3 grid grid-cols-1 sm:grid-cols-3">
+                    {(() => {
+                      const focusCount = topRiskAlerts.length;
+                      const coachRepsCount = Array.from(new Set(currentWindowDeals.filter(d => d.need_coaching || (Array.isArray(d.help_needed) && d.help_needed.length > 0)).map(d => d.owner_name))).length;
+                      const noiseCount = currentWindowDeals.filter(d => d.forecast_category === 'PIPELINE' && d.amount < 100000).length;
+                      return (
+                        <>
+                          <div className="flex items-center gap-1 sm:gap-1 md:gap-2 rounded-lg bg-white px-2 sm:px-2 md:px-3 py-2">
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-status-red/10 text-status-red whitespace-nowrap">Focus</span>
+                            <span className="text-[11px] sm:text-xs text-foreground">{focusCount} deals need intervention</span>
+                          </div>
+                          <div className="flex items-center gap-1 sm:gap-1 md:gap-2 rounded-lg bg-white px-2 sm:px-2 md:px-3 py-2">
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#605BFF]/10 text-[#605BFF] whitespace-nowrap">Coach</span>
+                            <span className="text-[11px] sm:text-xs text-foreground">{coachRepsCount} reps flagged for skill gaps</span>
+                          </div>
+                          <div className="flex items-center gap-1 sm:gap-1 md:gap-2 rounded-lg bg-white px-2 sm:px-2 md:px-3 py-2">
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-status-amber/10 text-status-amber whitespace-nowrap">Deprioritize</span>
+                            <span className="text-[11px] sm:text-xs text-foreground">{noiseCount} Low-value noise</span>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                  <div className="relative">
+                    {(() => {
+                      const all = agendaItems.filter(i => i.included);
+                      const beforeIds = new Set(['prep', 'uncover1', 'uncover2']);
+                      const duringIds = new Set(['lead']);
+                      const afterIds = new Set(['sync', 'eval']);
+                      const groups: Array<{ label: string; items: typeof all }> = [
+                        { label: 'Before coaching session', items: all.filter(i => beforeIds.has(i.id)) },
+                        { label: 'During coaching session', items: all.filter(i => duringIds.has(i.id)) },
+                        { label: 'After coaching session', items: all.filter(i => afterIds.has(i.id)) },
+                      ];
+                      const finished = pulseCompleted || (pulseStarted && pulseCurrentIdx >= all.length);
+                      const colorBlue = 'bg-[#605BFF]';
+                      const colorGreen = 'bg-status-green';
+                      const colorGray = 'bg-muted/60';
+                      const statusOf = (idx: number) => {
+                        if (finished) return 'green';
+                        if (!pulseStarted) return 'gray';
+                        if (idx < pulseCurrentIdx) return 'green';
+                        if (idx === pulseCurrentIdx) return 'blue';
+                        return 'gray';
+                      };
+                      return (
+                        <div className="space-y-4">
+                          {groups.map((g, gi) => (
+                            <div key={gi}>
+                              <div className="pl-6 text-[11px] uppercase tracking-wider text-muted-foreground mb-2">{g.label}</div>
+                              <div className="space-y-3">
+                                {g.items.map((i, idx) => {
+                                  const idxGlobal = all.findIndex(x => x.id === i.id);
+                                  const isFirstGlobal = idxGlobal === 0;
+                                  const isLastGlobal = idxGlobal === all.length - 1;
+                                  const s = statusOf(idxGlobal);
+                                  const dotClass =
+                                    s === 'green' ? 'bg-status-green' :
+                                    s === 'blue' ? 'bg-[#605BFF]' :
+                                    'bg-muted-foreground/40';
+                                  let topLineClass = '';
+                                  if (!isFirstGlobal) {
+                                    const prevIdxGlobal = idxGlobal - 1;
+                                    const ps = statusOf(prevIdxGlobal);
+                                    if (ps !== 'gray' && s !== 'gray') {
+                                      topLineClass = ps === 'green' && s === 'green' ? colorGreen : colorBlue;
+                                    } else {
+                                      topLineClass = colorGray;
+                                    }
+                                  }
+                                  let bottomLineClass = '';
+                                  if (!isLastGlobal) {
+                                    const nextIdxGlobal = idxGlobal + 1;
+                                    const ns = statusOf(nextIdxGlobal);
+                                    if (s !== 'gray' && ns !== 'gray') {
+                                      bottomLineClass = s === 'green' && ns === 'green' ? colorGreen : colorBlue;
+                                    } else {
+                                      bottomLineClass = colorGray;
+                                    }
+                                  }
+                                  return (
+                                    <div
+                                      key={i.id}
+                                      ref={(el) => { stepRefs.current[i.id] = el }}
+                                      className="pl-10 cursor-pointer"
+                                      onClick={() => { 
+                                        setPulseStarted(true); 
+                                        setPulseCurrentIdx(idxGlobal); 
+                                        localStorage.setItem('pulse.started', 'true');
+                                        localStorage.setItem('pulse.currentIdx', String(idxGlobal));
+                                        localStorage.setItem('pulse.completed', 'false');
+                                        const path = stepIdToRoute(i.id);
+                                        if (path) navigate(path);
+                                      }}
+                                    >
+                                      <div className="relative">
+                                        {!isFirstGlobal && <div className={`absolute left-[-20px] top-[-12px] bottom-1/2 w-0.5 ${topLineClass}`} />}
+                                        {!isLastGlobal && <div className={`absolute left-[-20px] top-1/2 bottom-[-12px] w-0.5 ${bottomLineClass}`} />}
+                                        <div className={`absolute left-[-20px] top-1/2 -translate-x-1/2 -translate-y-1/2 h-3 w-3 rounded-full ring-2 ring-background ${dotClass}`} />
+                                        <div className="text-[11px] text-muted-foreground">{i.time} — {i.minutes} min</div>
+                                        <div className="text-sm font-medium text-foreground">{i.id === 'uncover1' ? `Review ${flaggedCallsCur} flagged calls at 2x speed` : i.title}</div>
+                                        <div className="text-[11px] text-muted-foreground">{i.id === 'prep' ? `${assessmentsSubmittedCur}/${coachingEligibleCur.length} assessments received · ${topRiskAlerts.length} CRM alerts flagged` : i.sub}</div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                              
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Rep Tiering {tieringHeaderRange}</h2>
+                <div className="text-xs text-muted-foreground">AI-suggested based on Risk signals + self-assessments</div>
+              </div>
+              <Button variant="ghost" size="sm" className="text-xs text-[#605BFF] hover:bg-muted" onClick={() => setTierAdjustOpen(true)}>Adjust</Button>
+            </div>
+            {(() => {
+              const severityOf = (rep: (typeof mockAEReps)[number]) => {
+                const ds = currentWindowDeals.filter(d => d.owner_name === rep.name);
+                const needHelp = ds.some(d => d.forecast_category === 'COMMIT' && d.risk_level === 'RED');
+                if (needHelp || rep.hygiene_score < 75 || rep.slippage_count >= 2 || rep.overdue_actions >= 2) return 'atRisk' as const;
+                if (rep.hygiene_score < 85 || rep.slippage_count >= 1 || rep.overdue_actions >= 1) return 'watch' as const;
+                return 'onTrack' as const;
+              };
+              const rank = (tag: 'atRisk' | 'watch' | 'onTrack') => tag === 'atRisk' ? 0 : tag === 'watch' ? 1 : 2;
+              const sorted = mockAEReps.slice().sort((a, b) => {
+                const ra = rank(severityOf(a));
+                const rb = rank(severityOf(b));
+                if (ra !== rb) return ra - rb;
+                if (a.hygiene_score !== b.hygiene_score) return a.hygiene_score - b.hygiene_score;
+                if (a.slippage_count !== b.slippage_count) return b.slippage_count - a.slippage_count;
+                return a.name.localeCompare(b.name);
+              });
+              return (
+                <div className="grid grid-cols-1 gap-3">
+                  {sorted.map(rep => {
+                    const ready = rep.hygiene_score >= 80 && rep.overdue_actions === 0;
+                    const tag = severityOf(rep);
+                    const tagCls = tag === 'atRisk' ? 'bg-status-red/10 text-status-red' : tag === 'watch' ? 'bg-status-amber/10 text-status-amber' : 'bg-status-green/10 text-status-green';
+                    const tagLabel = tag === 'atRisk' ? 'At Risk' : tag === 'watch' ? 'Watch' : 'On Track';
+                    return (
+                      <div key={rep.user_id} className="rounded-lg bg-muted/40 p-3 flex items-start justify-between cursor-pointer hover:bg-[#605BFF]/10 transition-colors">
+                        <div className="flex items-start gap-3">
+                          <div className="h-9 w-9 rounded-full border flex items-center justify-center text-xs font-semibold">{getInitials(rep.name)}</div>
+                          <div>
+                            <div
+                              className="text-sm font-semibold text-foreground hover:text-[#605BFF] cursor-pointer"
+                              onClick={() => {
+                                if (!ready) navigate(`/manager-prep?repId=${rep.user_id}`);
+                              }}
+                            >
+                              {rep.name}
+                            </div>
+                            <div className="mt-1 text-[11px] text-muted-foreground">{buildDetails(rep)}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 self-center"
+                          onDoubleClick={() => {
+                            if (!ready) navigate(`/manager-prep?repId=${rep.user_id}`);
                           }}
                         >
-                          {ready ? 'ready' : 'pending'}
-                        </button>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#605BFF]/10 text-[#605BFF]">{groupLabel}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wider text-status-green mb-2">ASYNC ONLY (On Track)</div>
-              <div className="grid grid-cols-1 gap-3">
-                {buckets.async.map((rep) => {
-                  const ready = rep.hygiene_score >= 80 && rep.overdue_actions === 0;
-                  const groupLabel = 'Asynchronous';
-                  return (
-                    <div key={rep.user_id} className="rounded-lg bg-muted/40 p-3 flex items-start justify-between cursor-pointer hover:bg-[#605BFF]/10 transition-colors">
-                      <div className="flex items-start gap-3">
-                        <div className="h-9 w-9 rounded-full border flex items-center justify-center text-xs font-semibold">{getInitials(rep.name)}</div>
-                        <div>
-                          <div
-                            className="text-sm font-semibold text-foreground hover:text-[#605BFF] cursor-pointer"
+                          <button
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${ready ? 'bg-status-green/10 text-status-green' : 'bg-secondary/50 text-muted-foreground'} hover:opacity-80`}
                             onClick={() => {
-                              if (!ready) navigate(`/manager-prep?repId=${rep.user_id}`);
+                              if (ready) return;
+                              setNudgeTarget({ repId: rep.user_id, name: rep.name });
                             }}
                           >
-                            {rep.name}
-                          </div>
-                          <div className="mt-1 text-[11px] text-muted-foreground">{buildDetails(rep)}</div>
+                            {ready ? 'ready' : 'pending'}
+                          </button>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${tagCls}`}>{tagLabel}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 self-center"
-                        onDoubleClick={() => {
-                          if (!ready) navigate(`/manager-prep?repId=${rep.user_id}`);
-                        }}
-                      >
-                        <button
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${ready ? 'bg-status-green/10 text-status-green' : 'bg-secondary/50 text-muted-foreground'} hover:opacity-80`}
-                          onClick={() => {
-                            if (ready) return;
-                            setNudgeTarget({ repId: rep.user_id, name: rep.name });
-                          }}
-                        >
-                          {ready ? 'ready' : 'pending'}
-                        </button>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-status-green/10 text-status-green">{groupLabel}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wider text-[#FF8E1C] mb-2">STRETCH ASSIGNMENT</div>
-              <div className="grid grid-cols-1 gap-3">
-                {buckets.stretch.map((rep) => {
-                  const ready = rep.hygiene_score >= 80 && rep.overdue_actions === 0;
-                  const groupLabel = 'Stretch';
-                  return (
-                    <div key={rep.user_id} className="rounded-lg bg-muted/40 p-3 flex items-start justify-between cursor-pointer hover:bg-[#605BFF]/10 transition-colors">
-                      <div className="flex items-start gap-3">
-                        <div className="h-9 w-9 rounded-full border flex items-center justify-center text-xs font-semibold">{getInitials(rep.name)}</div>
-                        <div>
-                          <div
-                            className="text-sm font-semibold text-foreground hover:text-[#605BFF] cursor-pointer"
-                            onClick={() => {
-                              if (!ready) navigate(`/manager-prep?repId=${rep.user_id}`);
-                            }}
-                          >
-                            {rep.name}
-                          </div>
-                          <div className="mt-1 text-[11px] text-muted-foreground">{buildDetails(rep)}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 self-center"
-                        onDoubleClick={() => {
-                          if (!ready) navigate(`/manager-prep?repId=${rep.user_id}`);
-                        }}
-                      >
-                        <button
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${ready ? 'bg-status-green/10 text-status-green' : 'bg-secondary/50 text-muted-foreground'} hover:opacity-80`}
-                          onClick={() => {
-                            if (ready) return;
-                            setNudgeTarget({ repId: rep.user_id, name: rep.name });
-                          }}
-                        >
-                          {ready ? 'ready' : 'pending'}
-                        </button>
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#FF8E1C]/10 text-[#FF8E1C]">{groupLabel}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
@@ -882,173 +1415,6 @@ function ManagerViewContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 px-4 sm:px-6 pb-6">
-        <div className="rounded-lg border border-border bg-card p-4">
-          <div className="flex items-start justify-between mb-3">
-            <div>
-              <div className="text-sm font-semibold text-foreground">Top Risk Deals</div>
-              <div className="text-xs text-muted-foreground">Deals requiring coaching attention this week</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button type="button" className="text-[#FF8E1C] hover:opacity-80">
-                <Filter className="h-4 w-4" />
-              </button>
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-status-red/10 text-status-red">
-                {topRiskAlerts.length} alerts
-              </span>
-            </div>
-          </div>
-          <div className="rounded overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-border text-muted-foreground bg-secondary/40">
-                  <th className="text-left px-4 py-2 font-medium" style={{ width: '26ch' }}>Deal</th>
-                  <th className="text-left px-3 py-2 font-medium" style={{ width: '18ch' }}>Rep</th>
-                  <th className="text-left px-3 py-2 font-medium" style={{ width: '12ch' }}>Amount</th>
-                  <th className="text-left px-3 py-2 font-medium" style={{ width: '16ch' }}>Stage</th>
-                  <th className="text-left px-3 py-2 font-medium" style={{ width: '28ch' }}>Risk Signal</th>
-                  <th className="text-left px-3 py-2 font-medium" style={{ width: '14ch' }}>Days Stalled</th>
-                  <th className="text-left px-3 py-2 font-medium" style={{ width: '10ch' }}>Priority</th>
-                  <th className="text-left px-3 py-2 font-medium" style={{ width: '10ch' }}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {topRiskAlerts.map((d) => {
-                  const signal = Array.isArray(d.risk_reasons) && d.risk_reasons.length > 0
-                    ? ((d.risk_reasons[0]).label ?? String((d.risk_reasons[0]).code).replace(/[_-]/g, ' ').toLowerCase())
-                    : 'Low activity';
-                  const pr = priorityOf(d);
-                  const prCls = pr === 'P1' ? 'bg-status-red/10 text-status-red' : pr === 'P2' ? 'bg-status-amber/10 text-status-amber' : 'bg-[#605BFF]/10 text-[#605BFF]';
-                  return (
-                    <tr key={d.deal_id} className="border-b border-border last:border-0">
-                      <td className="px-4 py-2 align-top">
-                        <div className="text-foreground font-medium">{d.account_name}</div>
-                        <div className="text-[11px] text-muted-foreground">{d.deal_name}</div>
-                      </td>
-                      <td className="px-3 py-2 align-top">{d.owner_name}</td>
-                      <td className="px-3 py-2 align-top text-left">{formatCurrency(d.amount)}</td>
-                      <td className="px-3 py-2 align-top">{d.stage_name}</td>
-                      <td className="px-3 py-2 align-top">
-                        <span className={`inline-flex items-center justify-center text-center px-2 py-0.5 rounded-md text-[11px] font-medium whitespace-normal break-words ${riskBadgeClass(d)}`}>{signal}</span>
-                      </td>
-                      <td className="px-3 py-2 align-top text-left">{typeof d.staleness_days === 'number' ? d.staleness_days : '—'}</td>
-                      <td className="px-3 py-2 align-top">
-                        <span className={`px-2 py-0.5 rounded-full text-[11px] font-semibold ${prCls}`}>{pr}</span>
-                      </td>
-                      <td className="px-3 py-2 align-top">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button className="h-8 w-8 inline-flex items-center justify-center rounded hover:bg-gray-100">
-                              <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>review</DropdownMenuItem>
-                            <DropdownMenuItem>coaching</DropdownMenuItem>
-                            <DropdownMenuItem>update request</DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {topRiskAlerts.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-6 text-center text-muted-foreground">No risk alerts this period.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div className="rounded-lg border border-border bg-card p-4">
-          <div className="flex items-start justify-between mb-3">
-            <div>
-              <div className="text-sm font-semibold text-foreground">Top Value Deals</div>
-              <div className="text-xs text-muted-foreground">Commit + Best Case this period</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button type="button" className="text-[#FF8E1C] hover:opacity-80">
-                <Filter className="h-4 w-4" />
-              </button>
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#605BFF]/10 text-[#605BFF]">
-                {currentWindowDeals.filter(d => d.forecast_category === 'COMMIT' || d.forecast_category === 'BEST_CASE').length} deals
-              </span>
-            </div>
-          </div>
-          <div className="rounded overflow-x-auto">
-            {(() => {
-              const rows = currentWindowDeals
-                .filter(d => d.forecast_category === 'COMMIT' || d.forecast_category === 'BEST_CASE')
-                .slice()
-                .sort((a, b) => b.amount - a.amount)
-                .slice(0, 8);
-              return (
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-border text-muted-foreground bg-secondary/40">
-                      <th className="text-left px-4 py-2 font-medium" style={{ width: '26ch' }}>Deal</th>
-                      <th className="text-left px-3 py-2 font-medium" style={{ width: '18ch' }}>Rep</th>
-                      <th className="text-left px-3 py-2 font-medium" style={{ width: '12ch' }}>Amount</th>
-                      <th className="text-left px-3 py-2 font-medium" style={{ width: '16ch' }}>Stage</th>
-                      <th className="text-left px-3 py-2 font-medium" style={{ width: '16ch' }}>Forecast</th>
-                      <th className="text-left px-3 py-2 font-medium" style={{ width: '26ch' }}>Next Step</th>
-                      <th className="text-left px-3 py-2 font-medium" style={{ width: '10ch' }}>Action</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rows.map((d) => (
-                      <tr key={d.deal_id} className="border-b border-border last:border-0">
-                        <td className="px-4 py-2 align-top">
-                          <div className="text-foreground font-medium">{d.account_name}</div>
-                          <div className="text-[11px] text-muted-foreground">{d.deal_name}</div>
-                        </td>
-                        <td className="px-3 py-2 align-top">{d.owner_name}</td>
-                        <td className="px-3 py-2 align-top text-left">{formatCurrency(d.amount)}</td>
-                        <td className="px-3 py-2 align-top">{d.stage_name}</td>
-                        <td className="px-3 py-2 align-top">
-                          <span className="inline-flex items-center justify-center text-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-secondary/40 text-muted-foreground whitespace-normal break-words">
-                            {prettyForecast(d.forecast_category)}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 align-top">
-                          {d.next_step ? (
-                            <span className={`inline-flex items-center justify-center text-center px-2 py-0.5 rounded-md text-[11px] font-medium whitespace-normal break-words ${d.next_step.is_buyer_confirmed ? 'bg-status-green/10 text-status-green' : 'bg-secondary/50 text-muted-foreground'}`}>
-                              {d.next_step.is_buyer_confirmed ? 'Buyer confirmed' : 'Not confirmed'}
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center justify-center text-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-secondary/50 text-muted-foreground whitespace-normal break-words">No next step</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2 align-top">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <button className="h-8 w-8 inline-flex items-center justify-center rounded hover:bg-gray-100">
-                                <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                              </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem className="whitespace-nowrap">review</DropdownMenuItem>
-                              <DropdownMenuItem className="whitespace-nowrap">coaching</DropdownMenuItem>
-                              <DropdownMenuItem className="whitespace-nowrap">update request</DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </td>
-                      </tr>
-                    ))}
-                    {rows.length === 0 && (
-                      <tr>
-                        <td colSpan={7} className="px-4 py-6 text-center text-muted-foreground">No top deals this period.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              );
-            })()}
-          </div>
-        </div>
-      </div>
-      </div>
       <Dialog open={!!kpiDialog} onOpenChange={(open) => setKpiDialog(open ? kpiDialog : null)}>
         <DialogContent className={kpiDialog?.size === 'large' ? 'max-w-[95vw] w-[95vw] h-[85vh] flex flex-col' : undefined}>
           <DialogHeader className={kpiDialog?.size === 'large' ? 'shrink-0 px-4 py-3' : undefined}>
@@ -1069,8 +1435,124 @@ function ManagerViewContent() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <Sheet open={dealSheetOpen} onOpenChange={setDealSheetOpen}>
+        <SheetContent side="right" className="sm:max-w-lg w-[90vw] p-0 flex flex-col [&>button]:hidden">
+          <SheetHdr className="px-6 py-4 border-b">
+            <div className="flex items-center justify-between">
+              <SheetTtl>{selectedDeal ? `${selectedDeal.account_name} / ${selectedDeal.deal_name}` : ''}</SheetTtl>
+              <button type="button" className="h-8 w-8 inline-flex items-center justify-center rounded hover:bg-gray-100" onClick={() => setDealSheetOpen(false)} aria-label="Close">
+                <X className="h-5 w-5 text-muted-foreground" />
+              </button>
+            </div>
+          </SheetHdr>
+          {selectedDeal && (
+            <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Amount</div>
+                  <div className="text-sm font-medium text-foreground">{formatCurrency(selectedDeal.amount)}</div>
+                </div>
+                <div>
+                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Stage</div>
+                  <div className="text-sm font-medium text-foreground">{selectedDeal.stage_name}</div>
+                </div>
+                <div>
+                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Close date</div>
+                  <div className="text-sm font-medium text-foreground">
+                    {new Date(selectedDeal.close_date).toLocaleDateString()}
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {(() => { const dtc = daysTo(selectedDeal.close_date); return dtc >= 0 ? `in ${dtc} days` : `${Math.abs(dtc)} days overdue`; })()}
+                    </span>
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Risk level</div>
+                  <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${selectedDeal.risk_level === 'RED' ? 'border-status-red text-status-red' : selectedDeal.risk_level === 'AMBER' ? 'border-status-amber text-status-amber' : 'border-status-green text-status-green'}`}>
+                    {selectedDeal.risk_level}
+                  </div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Risk Signal</div>
+                  <div>
+                    {(() => {
+                      const sig = Array.isArray(selectedDeal.risk_reasons) && selectedDeal.risk_reasons.length > 0
+                        ? (selectedDeal.risk_reasons[0].label ?? String(selectedDeal.risk_reasons[0].code).replace(/[_-]/g, ' ').toLowerCase())
+                        : 'Low Activity';
+                      return <span className={`inline-flex items-center justify-center text-center px-2 py-0.5 rounded-md text-[11px] font-medium ${riskBadgeClass(selectedDeal)}`}>{sig}</span>;
+                    })()}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Forecast</div>
+                  <div className="text-sm font-medium text-foreground">{prettyForecast(selectedDeal.forecast_category)}</div>
+                </div>
+                <div className="col-span-2">
+                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Categories</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(() => {
+                      const cs: Array<{ label: string; cls: string }> = [];
+                      if (topRiskAlerts.some(a => a.deal_id === selectedDeal.deal_id)) cs.push({ label: 'Top Risk', cls: 'bg-status-red/10 text-status-red' });
+                      if (selectedDeal.forecast_category === 'COMMIT' || selectedDeal.forecast_category === 'BEST_CASE') cs.push({ label: 'Top Value', cls: 'bg-[#605BFF]/10 text-[#605BFF]' });
+                      return cs.map((c, i) => <span key={i} className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${c.cls}`}>{c.label}</span>);
+                    })()}
+                  </div>
+                </div>
+              </div>
+              <div>
+                <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Risk Reason</div>
+                <div className="text-sm text-foreground">{riskReasonText(selectedDeal)}</div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center text-[11px] font-semibold text-foreground">
+                  {getInitials(selectedDeal.owner_name)}
+                </div>
+                <div>
+                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Rep</div>
+                  <div className="text-sm font-medium text-foreground">{selectedDeal.owner_name}</div>
+                </div>
+              </div>
+              <div>
+                <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Key Risks</div>
+                <ul className="list-disc pl-5 text-sm text-foreground">
+                  {deriveKeyRisks(selectedDeal).map((r, i) => (<li key={i}>{r}</li>))}
+                </ul>
+              </div>
+              <div className={`mt-auto ${pinnedDealIds.includes(selectedDeal.deal_id) ? 'text-status-green' : 'text-muted-foreground'} text-sm`}>
+                {pinnedDealIds.includes(selectedDeal.deal_id) ? 'This deal is in your Pulse loop' : 'This deal is not in your Pulse loop'}
+              </div>
+            </div>
+          )}
+          <SheetFtr className="px-6 py-3 border-t justify-start sm:justify-start gap-2">
+            {selectedDeal && (
+              <>
+                <Button className="bg-[#605BFF] hover:bg-[#4F48E3]" size="sm" onClick={() => navigate('/leader-uncover')}>Uncover this deal</Button>
+                <Button variant="outline" size="sm" onClick={() => toggleLoopAdd(selectedDeal)}>
+                  {pinnedDealIds.includes(selectedDeal.deal_id) ? 'Remove from loop' : 'Add to loop'}
+                </Button>
+              </>
+            )}
+          </SheetFtr>
+        </SheetContent>
+      </Sheet>
+      <AlertDialog open={removeConfirmOpen} onOpenChange={setRemoveConfirmOpen}>
+        <AlertContent>
+          <AlertHdr>
+            <AlertDialogTitle>Remove from Pulse loop?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingRemoveDeal ? `This will remove ${pendingRemoveDeal.account_name} / ${pendingRemoveDeal.deal_name} from your Pulse loop.` : ''}
+            </AlertDialogDescription>
+          </AlertHdr>
+          <DialogFooter className="pt-2">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRemove}>Remove</AlertDialogAction>
+          </DialogFooter>
+        </AlertContent>
+      </AlertDialog>
 
       
+    </div>
     </div>
   );
 }

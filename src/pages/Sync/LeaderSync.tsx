@@ -73,7 +73,8 @@ export default function LeaderSync() {
             <PulseFlow
               compact
               completeOnClick
-              initialActiveStep="sync"
+                initialActiveStep="sync"
+                pageStepId="sync"
               onNavigateToStep={(step) => {
                 if (step === "prepare") navigate("/manager-prep");
                 else if (step === "uncover") navigate("/leader-uncover");

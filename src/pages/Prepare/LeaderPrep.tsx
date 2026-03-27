@@ -200,6 +200,7 @@ export default function ManagerPrep() {
                 compact
                 completeOnClick
                 initialActiveStep="prepare"
+                pageStepId="prepare"
                 onNavigateToStep={(step) => {
                   if (step === "prepare") navigate("/manager-prep");
                   else if (step === "uncover") navigate("/leader-uncover");

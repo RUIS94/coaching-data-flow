@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 
 interface Step {
@@ -15,6 +15,7 @@ interface PulseFlowProps {
   completeOnClick?: boolean;
   initialActiveStep?: string | null;
   disableActiveHighlight?: boolean;
+  pageStepId?: 'prepare' | 'uncover' | 'lead' | 'sync' | 'evaluate' | null;
 }
 
 const steps: Step[] = [
@@ -55,9 +56,51 @@ const steps: Step[] = [
   }
 ];
 
-export default function PulseFlow({ onNavigateToStep, compact, completeOnClick, initialActiveStep, disableActiveHighlight }: PulseFlowProps) {
-  const [activeStep, setActiveStep] = useState<string | null>(initialActiveStep ?? 'prepare');
+function mapGlobalIdxToPulseIdx(gIdx: number, completed: boolean): number {
+  if (completed) return steps.length - 1; // evaluate
+  if (gIdx <= 0) return 0;              // prepare
+  if (gIdx <= 2) return 1;              // uncover (covers both 1 & 2)
+  if (gIdx === 3) return 2;             // lead
+  if (gIdx === 4) return 3;             // sync
+  return 4;                              // evaluate (gIdx >= 5)
+}
+function pulseStepIdToGlobalIdx(stepId: string): number {
+  if (stepId === 'prepare') return 0;
+  if (stepId === 'uncover') return 1;   // start of uncover sequence
+  if (stepId === 'lead') return 3;
+  if (stepId === 'sync') return 4;
+  return 5;                             // evaluate
+}
+
+export default function PulseFlow({ onNavigateToStep, compact, completeOnClick, initialActiveStep, disableActiveHighlight, pageStepId }: PulseFlowProps) {
+  const [activeStep, setActiveStep] = useState<string | null>(pageStepId ?? initialActiveStep ?? 'prepare');
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const readState = () => {
+      const gStr = typeof window !== 'undefined' ? localStorage.getItem('pulse.currentIdx') : null;
+      const comp = typeof window !== 'undefined' ? localStorage.getItem('pulse.completed') === 'true' : false;
+      const gIdxNum = gStr ? parseInt(gStr, 10) : 0;
+      const gIdx = Number.isNaN(gIdxNum) ? 0 : gIdxNum;
+      const pfIdx = mapGlobalIdxToPulseIdx(gIdx, comp);
+      const completedCount = comp ? steps.length : Math.max(0, pfIdx);
+      setCompletedSteps(new Set(steps.slice(0, completedCount).map(s => s.id)));
+      if (!pageStepId) {
+        const act = steps[pfIdx]?.id ?? 'evaluate';
+        setActiveStep(act);
+      } else {
+        setActiveStep(pageStepId);
+      }
+    };
+    readState();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'pulse.currentIdx' || e.key === 'pulse.completed') {
+        readState();
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [pageStepId]);
 
   const handleStepClick = (stepId: string) => {
     if (!disableActiveHighlight) {
@@ -66,6 +109,12 @@ export default function PulseFlow({ onNavigateToStep, compact, completeOnClick, 
     onNavigateToStep?.(stepId);
     if (completeOnClick) {
       setCompletedSteps(prev => new Set([...prev, stepId]));
+    }
+    const gIdx = pulseStepIdToGlobalIdx(stepId);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pulse.started', 'true');
+      localStorage.setItem('pulse.completed', 'false');
+      localStorage.setItem('pulse.currentIdx', String(gIdx));
     }
   };
 
@@ -159,6 +208,12 @@ export default function PulseFlow({ onNavigateToStep, compact, completeOnClick, 
                 const currentIndex = steps.findIndex(s => s.id === activeStep);
                 if (currentIndex < steps.length - 1) {
                   handleStepClick(steps[currentIndex + 1].id);
+                } else {
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('pulse.started', 'true');
+                    localStorage.setItem('pulse.completed', 'true');
+                    localStorage.setItem('pulse.currentIdx', String(6)); // beyond last global step
+                  }
                 }
               }}
               className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded transition-colors flex-shrink-0"

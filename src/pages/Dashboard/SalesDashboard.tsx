@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { PageHeader } from "@/components/CommonComponents/PageHeader";
 import { KPICard } from "@/components/CommonComponents/KPICard";
 import { mockAEReps, mockDeals, mockTasks, formatCurrency } from "@/data/mock";
-import PulseFlow from "@/components/dashboard/PulseFlow";
+ 
 
 export default function SalesCoachingDashboard() {
   const me = mockAEReps[0]?.name ?? "Sales Rep";
@@ -55,23 +55,7 @@ export default function SalesCoachingDashboard() {
           titleClassName="text-2xl font-bold text-gray-900"
           inlineChildren
         >
-          <div className="flex items-center w-full justify-end gap-8">
-            <div className="flex-shrink-0">
-              <PulseFlow
-                compact
-                completeOnClick
-                initialActiveStep={null}
-                disableActiveHighlight
-                onNavigateToStep={(step) => {
-                  if (step === "prepare") navigate("/sales-prep");
-                  else if (step === "uncover") navigate("/sales-uncover");
-                  else if (step === "lead") navigate("/sales-lead");
-                  else if (step === "sync") navigate("/sales-sync");
-                  else if (step === "evaluate") navigate("/sales-evaluate");
-                }}
-              />
-            </div>
-          </div>
+          <div className="flex items-center w-full justify-end gap-8" />
         </PageHeader>
       </div>
 

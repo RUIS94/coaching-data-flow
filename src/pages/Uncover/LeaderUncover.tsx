@@ -173,6 +173,7 @@ export default function LeaderUncover() {
               compact
               completeOnClick
               initialActiveStep="uncover"
+              pageStepId="uncover"
               onNavigateToStep={(step) => {
                 if (step === "prepare") navigate("/manager-prep");
                 else if (step === "uncover") navigate("/leader-uncover");

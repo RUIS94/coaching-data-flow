@@ -42,7 +42,8 @@ export default function LeaderEvaluate() {
             <PulseFlow
               compact
               completeOnClick
-              initialActiveStep="evaluate"
+                initialActiveStep="evaluate"
+                pageStepId="evaluate"
               onNavigateToStep={(step) => {
                 if (step === "prepare") navigate("/manager-prep");
                 else if (step === "uncover") navigate("/leader-uncover");
