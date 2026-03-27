@@ -52,7 +52,7 @@ export function KPICard({ label, value, valueColor, valueIcon, valueIconColor, s
           )}
         </div>
         {ValueIcon ? (
-          <ValueIcon className="h-4 w-4" style={valueIconColor ? { color: valueIconColor } : undefined} />
+          <ValueIcon className="h-6 w-6" style={valueIconColor ? { color: valueIconColor } : undefined} />
         ) : null}
       </div>
       {noteSegments && noteSegments.length > 0 ? (

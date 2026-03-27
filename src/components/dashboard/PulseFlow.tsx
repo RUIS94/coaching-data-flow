@@ -57,19 +57,16 @@ const steps: Step[] = [
 ];
 
 function mapGlobalIdxToPulseIdx(gIdx: number, completed: boolean): number {
-  if (completed) return steps.length - 1; // evaluate
-  if (gIdx <= 0) return 0;              // prepare
-  if (gIdx <= 2) return 1;              // uncover (covers both 1 & 2)
-  if (gIdx === 3) return 2;             // lead
-  if (gIdx === 4) return 3;             // sync
-  return 4;                              // evaluate (gIdx >= 5)
+  if (completed) return 4; // evaluate
+  const clamped = Math.max(0, Math.min(4, gIdx));
+  return clamped; // 0:P, 1:U, 2:L, 3:S, 4:E
 }
 function pulseStepIdToGlobalIdx(stepId: string): number {
   if (stepId === 'prepare') return 0;
-  if (stepId === 'uncover') return 1;   // start of uncover sequence
-  if (stepId === 'lead') return 3;
-  if (stepId === 'sync') return 4;
-  return 5;                             // evaluate
+  if (stepId === 'uncover') return 1;
+  if (stepId === 'lead') return 2;
+  if (stepId === 'sync') return 3;
+  return 4; // evaluate
 }
 
 export default function PulseFlow({ onNavigateToStep, compact, completeOnClick, initialActiveStep, disableActiveHighlight, pageStepId }: PulseFlowProps) {
@@ -78,8 +75,8 @@ export default function PulseFlow({ onNavigateToStep, compact, completeOnClick, 
 
   useEffect(() => {
     const readState = () => {
-      const gStr = typeof window !== 'undefined' ? localStorage.getItem('pulse.currentIdx') : null;
-      const comp = typeof window !== 'undefined' ? localStorage.getItem('pulse.completed') === 'true' : false;
+      const gStr = typeof window !== 'undefined' ? sessionStorage.getItem('pulse.currentIdx') : null;
+      const comp = typeof window !== 'undefined' ? sessionStorage.getItem('pulse.completed') === 'true' : false;
       const gIdxNum = gStr ? parseInt(gStr, 10) : 0;
       const gIdx = Number.isNaN(gIdxNum) ? 0 : gIdxNum;
       const pfIdx = mapGlobalIdxToPulseIdx(gIdx, comp);
@@ -112,9 +109,11 @@ export default function PulseFlow({ onNavigateToStep, compact, completeOnClick, 
     }
     const gIdx = pulseStepIdToGlobalIdx(stepId);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('pulse.started', 'true');
-      localStorage.setItem('pulse.completed', 'false');
-      localStorage.setItem('pulse.currentIdx', String(gIdx));
+      const wasCompleted = sessionStorage.getItem('pulse.completed') === 'true';
+      sessionStorage.setItem('pulse.started', 'true');
+      sessionStorage.setItem('pulse.completed', wasCompleted || (stepId === 'evaluate' && !!completeOnClick) ? 'true' : 'false');
+      sessionStorage.setItem('pulse.currentIdx', String(gIdx));
+      window.dispatchEvent(new Event('pulse:state'));
     }
   };
 
@@ -144,7 +143,7 @@ export default function PulseFlow({ onNavigateToStep, compact, completeOnClick, 
                   }
                 `}
               >
-                {isCompleted && !isActive && (
+                {isCompleted && (
                   <div className="absolute top-1 right-1 z-10 pointer-events-none">
                     <CheckCircle2 size={16} className="text-green-600 bg-white rounded-full" />
                   </div>
@@ -210,9 +209,10 @@ export default function PulseFlow({ onNavigateToStep, compact, completeOnClick, 
                   handleStepClick(steps[currentIndex + 1].id);
                 } else {
                   if (typeof window !== 'undefined') {
-                    localStorage.setItem('pulse.started', 'true');
-                    localStorage.setItem('pulse.completed', 'true');
-                    localStorage.setItem('pulse.currentIdx', String(6)); // beyond last global step
+                    sessionStorage.setItem('pulse.started', 'true');
+                    sessionStorage.setItem('pulse.completed', 'true');
+                    sessionStorage.setItem('pulse.currentIdx', String(4)); // evaluate
+                    window.dispatchEvent(new Event('pulse:state'));
                   }
                 }
               }}

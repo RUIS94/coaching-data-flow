@@ -63,6 +63,7 @@ function ManagerViewContent() {
   const [kpiDialog, setKpiDialog] = useState<{ label: string; content: JSX.Element; size?: 'default' | 'large'; headerRight?: JSX.Element } | null>(null);
   const [selectedAE, setSelectedAE] = useState<string | null>(null);
   const [segment, setSegment] = useState('all');
+  const [agendaAdjustOpen, setAgendaAdjustOpen] = useState(false);
   const [tierAdjustOpen, setTierAdjustOpen] = useState(false);
   const [tierOverrides, setTierOverrides] = useState<Record<string, 'sync' | 'async' | 'stretch'>>({});
   const [nudgeTarget, setNudgeTarget] = useState<{ repId: string; name: string } | null>(null);
@@ -93,9 +94,9 @@ function ManagerViewContent() {
     if (!pulseStarted) {
       setPulseStarted(true);
       setPulseCurrentIdx(0);
-      sessionStorage.setItem('pulse.started', 'true');
-      sessionStorage.setItem('pulse.currentIdx', '0');
-      sessionStorage.setItem('pulse.completed', 'false');
+      localStorage.setItem('pulse.started', 'true');
+      localStorage.setItem('pulse.currentIdx', '0');
+      localStorage.setItem('pulse.completed', 'false');
       const id = steps[0]?.id;
       setTimeout(() => {
         if (id && stepRefs.current[id]) stepRefs.current[id]?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -112,11 +113,12 @@ function ManagerViewContent() {
   };
   type AgendaItem = { id: string; status: 'done' | 'current' | 'pending'; time: string; title: string; sub: string; minutes: number; included: boolean };
   const makeAgendaTemplate = (range: string): AgendaItem[] => [
-    { id: 'prep', status: 'pending', time: 'MON — Prepare', title: 'Prepare', sub: '', minutes: 30, included: true },
-    { id: 'uncover', status: 'pending', time: 'MON-TUE — Uncover', title: 'Uncover', sub: '', minutes: 60, included: true },
-    { id: 'lead', status: 'pending', time: 'TUE-THU — Lead', title: 'Lead', sub: '', minutes: 75, included: true },
-    { id: 'sync', status: 'pending', time: 'WED — Sync', title: 'Sync', sub: '', minutes: 30, included: true },
-    { id: 'eval', status: 'pending', time: 'FRI — Evaluate', title: 'Evaluate', sub: '', minutes: 15, included: true },
+    { id: 'prep', status: 'done', time: 'MON — Prepare', title: 'Review CRM alerts, self-assessments, tier reps', sub: '6/8 assessments received · 5 CRM alerts flagged', minutes: 30, included: true },
+    { id: 'uncover1', status: 'current', time: 'MON-TUE — Uncover', title: 'Review 4 flagged calls at 2x speed', sub: 'Sarah: objection handling · James: discovery · Lisa: closing · Tom: intro', minutes: 60, included: true },
+    { id: 'uncover2', status: 'pending', time: 'TUE — Uncover', title: 'Send 4 coaching voice notes (P-O-Q formula)', sub: 'Positive → Observation → Question per rep', minutes: 20, included: true },
+    { id: 'lead', status: 'pending', time: 'TUE-THU — Lead', title: '4 sync 1:1s (15-20 min each)', sub: 'Sarah: pipeline recovery · James: deal strategy · Lisa: $85K deal · Tom: ramp check', minutes: 75, included: true },
+    { id: 'sync', status: 'pending', time: 'WED — Sync', title: 'Review Pipeline Pulse posts + record synthesis video', sub: 'Team commit, wins, common themes, priorities', minutes: 30, included: true },
+    { id: 'eval', status: 'pending', time: 'FRI — Evaluate', title: 'Review KPIs + weekly reflection', sub: '5 reflection questions · feed into next week\'s Prepare', minutes: 15, included: true },
   ];
   const [agendaItems, setAgendaItems] = useState<AgendaItem[]>(() => makeAgendaTemplate(timeRange));
   useEffect(() => {
@@ -124,25 +126,35 @@ function ManagerViewContent() {
   }, [timeRange]);
   const navigate = useNavigate();
   useEffect(() => {
+    const started = localStorage.getItem('pulse.started') === 'true';
+    const idxStr = localStorage.getItem('pulse.currentIdx');
+    const idx = idxStr ? parseInt(idxStr, 10) : -1;
+    const comp = localStorage.getItem('pulse.completed') === 'true';
+    setPulseStarted(started);
+    setPulseCurrentIdx(Number.isNaN(idx) ? -1 : idx);
+    setPulseCompleted(comp);
+  }, []);
+  useEffect(() => {
+    localStorage.setItem('pulse.started', String(pulseStarted));
+    localStorage.setItem('pulse.currentIdx', String(pulseCurrentIdx));
+  }, [pulseStarted, pulseCurrentIdx]);
+  useEffect(() => {
     const syncFromStorage = () => {
-      const started = sessionStorage.getItem('pulse.started') === 'true';
-      const idxStr = sessionStorage.getItem('pulse.currentIdx');
+      const started = localStorage.getItem('pulse.started') === 'true';
+      const idxStr = localStorage.getItem('pulse.currentIdx');
       const idx = idxStr ? parseInt(idxStr, 10) : -1;
-      const comp = sessionStorage.getItem('pulse.completed') === 'true';
+      const comp = localStorage.getItem('pulse.completed') === 'true';
       setPulseStarted(started);
       setPulseCurrentIdx(Number.isNaN(idx) ? -1 : idx);
       setPulseCompleted(comp);
     };
-    syncFromStorage();
     const onVisibility = () => { if (document.visibilityState === 'visible') syncFromStorage(); };
     window.addEventListener('storage', syncFromStorage);
     window.addEventListener('focus', syncFromStorage);
-    window.addEventListener('pulse:state', syncFromStorage);
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
       window.removeEventListener('storage', syncFromStorage);
       window.removeEventListener('focus', syncFromStorage);
-      window.removeEventListener('pulse:state', syncFromStorage);
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, []);
@@ -378,35 +390,24 @@ function ManagerViewContent() {
   }
   const buildDetails = (rep: (typeof mockAEReps)[number]) => {
     const ds = currentWindowDeals.filter(d => d.owner_name === rep.name);
-    const countByRisk = (code: RiskReason['code']) =>
-      ds.filter(d => Array.isArray(d.risk_reasons) && d.risk_reasons.some(r => r.code === code)).length;
-    const slipDeals = countByRisk('CLOSE_DATE_MOVED');
-    if (rep.slippage_count > 0 || slipDeals > 0) {
-      const n = Math.max(rep.slippage_count, slipDeals);
-      return `${n} deals slipping past close dates`;
-    }
-    const singleThreadedDeals = ds.filter(d => d.risk_reasons?.some(r => r.code === 'SINGLE_THREADED'));
-    if (singleThreadedDeals.length > 0) {
-      const hasEnterprise = singleThreadedDeals.some(d => d.amount >= 200000);
-      return hasEnterprise ? 'Multi-threading weak on enterprise deals' : 'Multi-threading weak on key deals';
-    }
-    const discoveryStuck = ds.filter(d => d.stage_name === 'Discovery' && d.risk_reasons?.some(r => r.code === 'STAGE_STUCK')).length;
-    if (discoveryStuck > 0) {
-      return `Discovery stalled — ${discoveryStuck} deals stuck`;
-    }
-    const missingEb = countByRisk('MISSING_EB');
-    if (missingEb > 0) {
-      return 'Missing EB — secure executive sponsor';
-    }
-    const weakValue = countByRisk('WEAK_VALUE');
-    if (weakValue > 0) {
-      return 'Value story weak — quantify business impact';
-    }
-    const lowAct = countByRisk('LOW_ACTIVITY');
-    if (lowAct > 0) {
-      return 'Low activity on key deals';
-    }
-    return `Hygiene ${(rep.hygiene_score / 10).toFixed(1)}/10 — maintain momentum`;
+    const stalled = ds.filter(d => Array.isArray(d.risk_reasons) && d.risk_reasons.some(r => r.code === 'STAGE_STUCK')).length;
+    const commitAmtCur = ds.filter(d => d.forecast_category === 'COMMIT').reduce((s, d) => s + d.amount, 0);
+    const commitAmtPrev = previousWindowDeals.filter(d => d.owner_name === rep.name && d.forecast_category === 'COMMIT').reduce((s, d) => s + d.amount, 0);
+    const pct = commitAmtPrev ? Math.round(((commitAmtCur - commitAmtPrev) * 100) / commitAmtPrev) : 0;
+    const commitTxt = pct === 0 ? 'Commit flat' : pct > 0 ? `Commit up ${pct}%` : `Commit dropped ${Math.abs(pct)}%`;
+    const pipelineFilter = (d: Deal) => d.forecast_category === 'PIPELINE' || d.forecast_category === 'COMMIT' || d.forecast_category === 'BEST_CASE';
+    const pipelineAmt = ds.filter(pipelineFilter).reduce((s, d) => s + d.amount, 0);
+    const coverage = targetPerAEAll > 0 ? (pipelineAmt / targetPerAEAll) : 0;
+    const coverageTxt = `Pipeline coverage ${coverage.toFixed(1)}x`;
+    const needHelp = ds.some(d => d.forecast_category === 'COMMIT' && d.risk_level === 'RED');
+    const helpTxt = needHelp ? 'Needs deal help' : null;
+    const slipped = ds
+      .filter(d => Array.isArray(d.risk_reasons) && d.risk_reasons.some(r => r.code === 'CLOSE_DATE_MOVED'))
+      .slice()
+      .sort((a, b) => b.amount - a.amount)[0];
+    const slipTxt = slipped ? `Close date pushed on ${formatCurrency(slipped.amount)} deal` : null;
+    const parts = [`${stalled} stalled deals`, commitTxt, coverageTxt, helpTxt, slipTxt].filter(Boolean) as string[];
+    return parts.join(' · ');
   };
   const formatMonthLabel = (d: Date) =>
     `${d.toLocaleString('en-US', { month: 'short' })} ${d.getFullYear()}`;
@@ -760,7 +761,7 @@ function ManagerViewContent() {
           label={targetLabel}
           value={formatCurrency(targetAmount)}
           valueIcon={Target}
-          valueIconColor="#FF8E1C"
+          valueIconColor="#605BFF"
           trend="flat"
           trendLabel={trendTextSame}
         />
@@ -814,12 +815,13 @@ function ManagerViewContent() {
         />
       </div>
 
-      {/* Three Column Layout: 40% / 30% / 30% */}
-      <div className="grid grid-cols-1 lg:grid-cols-10 gap-4 px-4 sm:px-6 pb-6">
-        <div className="rounded-lg border border-border bg-card p-4 lg:col-span-4 flex flex-col min-h-0 max-h-[calc(100vh-300px)]" id="priority-deals-section" ref={priorityDealsRef}>
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 px-4 sm:px-6 pb-6">
+        <div className="rounded-lg border border-border bg-card p-4" id="priority-deals-section" ref={priorityDealsRef}>
           <div className="flex items-start justify-between mb-3">
             <div>
               <div className="text-sm font-semibold text-foreground">Critical Deals</div>
+              <div className="text-xs text-muted-foreground">Coaching and forecast priorities</div>
             </div>
             <div className="flex items-center gap-2">
               <span
@@ -999,7 +1001,7 @@ function ManagerViewContent() {
               {/* Removed deals count & stake badge per request */}
             </div>
           </div>
-          <div className="rounded overflow-x-auto overflow-y-auto flex-1 min-h-0 pr-1" style={{ scrollbarGutter: 'stable both-edges' }}>
+          <div className="rounded overflow-x-auto">
             {(() => {
               const topValue = currentWindowDeals
                 .filter(d => d.forecast_category === 'COMMIT' || d.forecast_category === 'BEST_CASE')
@@ -1117,8 +1119,8 @@ function ManagerViewContent() {
             })()}
           </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:col-span-6">
-          <div className="rounded-lg border border-border bg-card p-4 flex flex-col min-h-0 max-h-[calc(100vh-300px)]">
+        <div className="flex flex-col gap-4">
+          <div className="rounded-lg border border-border bg-card p-4">
             {(() => {
               const totalMinutes = agendaItems.filter(i => i.included).reduce((s, i) => s + i.minutes, 0);
               const hours = totalMinutes / 60;
@@ -1128,33 +1130,61 @@ function ManagerViewContent() {
                 <>
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <div className="text-sm font-semibold text-foreground">{period} Coaching Plan</div>
-                      <div className="text-xs text-muted-foreground">AI-prioritized actions</div>
+                      <div className="text-sm font-semibold text-foreground">{period} Coaching Agenda</div>
+                      <div className="text-xs text-muted-foreground">AI-prioritized actions based on deal health and rep signals</div>
                     </div>
                     <div className="flex items-center gap-2">
-                      {(() => {
-                        const allLen = agendaItems.filter(i => i.included).length;
-                        const finishedHeader = pulseCompleted || (pulseStarted && pulseCurrentIdx >= allLen);
-                        if (finishedHeader) {
-                          return (
-                            <span className="text-xs font-semibold text-[#605BFF]">Complete Pulse Loop</span>
-                          );
-                        }
-                        return (
-                          <Button
-                            size="sm"
-                            className="text-xs bg-[#605BFF] hover:bg-[#4F48E3]"
-                            onClick={startOrResumePulse}
-                          >
-                            {pulseStarted ? 'Resume Pulse Loop' : 'Start Pulse Loop'}
-                          </Button>
-                        );
-                      })()}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-[#605BFF] hover:bg-muted"
+                        onClick={() => setAgendaAdjustOpen(true)}
+                      >
+                        Adjust
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="text-xs bg-[#605BFF] hover:bg-[#4F48E3]"
+                        onClick={startOrResumePulse}
+                      >
+                        {pulseStarted ? 'Resume Pulse Loop' : 'Start Pulse Loop'}
+                      </Button>
                     </div>
                   </div>
-                  <div className="relative flex-1 min-h-0 overflow-y-auto pr-1" style={{ scrollbarGutter: 'stable both-edges' }}>
+                  <div className="mb-3 grid grid-cols-1 sm:grid-cols-3">
+                    {(() => {
+                      const focusCount = topRiskAlerts.length;
+                      const coachRepsCount = Array.from(new Set(currentWindowDeals.filter(d => d.need_coaching || (Array.isArray(d.help_needed) && d.help_needed.length > 0)).map(d => d.owner_name))).length;
+                      const noiseCount = currentWindowDeals.filter(d => d.forecast_category === 'PIPELINE' && d.amount < 100000).length;
+                      return (
+                        <>
+                          <div className="flex items-center gap-1 sm:gap-1 md:gap-2 rounded-lg bg-white px-2 sm:px-2 md:px-3 py-2">
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-status-red/10 text-status-red whitespace-nowrap">Focus</span>
+                            <span className="text-[11px] sm:text-xs text-foreground">{focusCount} deals need intervention</span>
+                          </div>
+                          <div className="flex items-center gap-1 sm:gap-1 md:gap-2 rounded-lg bg-white px-2 sm:px-2 md:px-3 py-2">
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#605BFF]/10 text-[#605BFF] whitespace-nowrap">Coach</span>
+                            <span className="text-[11px] sm:text-xs text-foreground">{coachRepsCount} reps flagged for skill gaps</span>
+                          </div>
+                          <div className="flex items-center gap-1 sm:gap-1 md:gap-2 rounded-lg bg-white px-2 sm:px-2 md:px-3 py-2">
+                            <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-status-amber/10 text-status-amber whitespace-nowrap">Deprioritize</span>
+                            <span className="text-[11px] sm:text-xs text-foreground">{noiseCount} Low-value noise</span>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
+                  <div className="relative">
                     {(() => {
                       const all = agendaItems.filter(i => i.included);
+                      const beforeIds = new Set(['prep', 'uncover1', 'uncover2']);
+                      const duringIds = new Set(['lead']);
+                      const afterIds = new Set(['sync', 'eval']);
+                      const groups: Array<{ label: string; items: typeof all }> = [
+                        { label: 'Before coaching session', items: all.filter(i => beforeIds.has(i.id)) },
+                        { label: 'During coaching session', items: all.filter(i => duringIds.has(i.id)) },
+                        { label: 'After coaching session', items: all.filter(i => afterIds.has(i.id)) },
+                      ];
                       const finished = pulseCompleted || (pulseStarted && pulseCurrentIdx >= all.length);
                       const colorBlue = 'bg-[#605BFF]';
                       const colorGreen = 'bg-status-green';
@@ -1166,107 +1196,71 @@ function ManagerViewContent() {
                         if (idx === pulseCurrentIdx) return 'blue';
                         return 'gray';
                       };
-                      const focusCount = topRiskAlerts.length;
-                      const coachRepsCount = Array.from(new Set(currentWindowDeals.filter(d => d.need_coaching || (Array.isArray(d.help_needed) && d.help_needed.length > 0)).map(d => d.owner_name))).length;
-                      const noiseCount = currentWindowDeals.filter(d => d.forecast_category === 'PIPELINE' && d.amount < 100000).length;
                       return (
-                        <div className="space-y-3">
-                          {all.map((i, idxGlobal) => {
-                            const isFirstGlobal = idxGlobal === 0;
-                            const isLastGlobal = idxGlobal === all.length - 1;
-                            const s = statusOf(idxGlobal);
-                            const dotClass =
-                              s === 'green' ? 'bg-status-green' :
-                              s === 'blue' ? 'bg-[#605BFF]' :
-                              'bg-muted-foreground/40';
-                            let topLineClass = '';
-                            if (!isFirstGlobal) {
-                              const prevIdxGlobal = idxGlobal - 1;
-                              const ps = statusOf(prevIdxGlobal);
-                              if (ps !== 'gray' && s !== 'gray') {
-                                topLineClass = ps === 'green' && s === 'green' ? colorGreen : colorBlue;
-                              } else {
-                                topLineClass = colorGray;
-                              }
-                            }
-                            let bottomLineClass = '';
-                            if (!isLastGlobal) {
-                              const nextIdxGlobal = idxGlobal + 1;
-                              const ns = statusOf(nextIdxGlobal);
-                              if (s !== 'gray' && ns !== 'gray') {
-                                bottomLineClass = s === 'green' && ns === 'green' ? colorGreen : colorBlue;
-                              } else {
-                                bottomLineClass = colorGray;
-                              }
-                            }
-                            return (
-                              <div
-                                key={i.id}
-                                ref={(el) => { stepRefs.current[i.id] = el }}
-                                className="pl-10 cursor-default"
-                              >
-                                <div className="relative h-20 flex flex-col justify-center">
-                                  {!isFirstGlobal && <div className={`absolute left-[-20px] top-[-12px] bottom-1/2 w-0.5 ${topLineClass}`} />}
-                                  {!isLastGlobal && <div className={`absolute left-[-20px] top-1/2 bottom-[-12px] w-0.5 ${bottomLineClass}`} />}
-                                  <div className={`absolute left-[-20px] top-1/2 -translate-x-1/2 -translate-y-1/2 h-3 w-3 rounded-full ring-2 ring-background ${dotClass}`} />
-                                  {(() => {
-                                    const clickable = s === 'green' || s === 'blue';
-                                    const title = i.id === 'prep' ? 'Prepare' : i.id === 'uncover' ? 'Uncover' : i.id === 'lead' ? 'Lead' : i.title;
-                                    const cls = clickable ? 'text-[11px] font-medium text-[#605BFF] cursor-pointer hover:underline' : 'text-[11px] text-muted-foreground';
-                                    return (
-                                      <div
-                                        className={cls}
-                                        onClick={() => {
-                                          if (!clickable) return;
-                                          const path = stepIdToRoute(i.id);
-                                          if (path) navigate(path);
-                                        }}
-                                      >
-                                        {title}
-                                      </div>
-                                    );
-                                  })()}
-                                  {i.id === 'prep' ? (
-                                    <div className="mt-1 text-sm">
-                                      <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-status-red/10 text-status-red mr-2">Focus</span>
-                                      <span
-                                        className="text-foreground cursor-pointer underline decoration-dotted"
-                                        onClick={() => navigate('/manager-prep')}
-                                        role="button"
-                                        tabIndex={0}
-                                      >
-                                        {focusCount} deals need intervention
-                                      </span>
-                                    </div>
-                                  ) : i.id === 'uncover' ? (
-                                    <div className="mt-1 space-y-1">
-                                      <div
-                                        className="text-sm cursor-pointer"
-                                        onClick={() => navigate('/leader-uncover')}
-                                      >
-                                        <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#FF8E1C]/10 text-[#FF8E1C] mr-2">Coach</span>
-                                        <span className="text-foreground">{coachRepsCount} reps flagged for skill gaps</span>
-                                      </div>
-                                      <div
-                                        className="text-sm cursor-pointer"
-                                        onClick={() => navigate('/leader-uncover')}
-                                      >
-                                        <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-secondary/60 text-muted-foreground mr-2">Deprioritize</span>
-                                        <span className="text-foreground">{noiseCount} Low-value pipeline noise</span>
+                        <div className="space-y-4">
+                          {groups.map((g, gi) => (
+                            <div key={gi}>
+                              <div className="pl-6 text-[11px] uppercase tracking-wider text-muted-foreground mb-2">{g.label}</div>
+                              <div className="space-y-3">
+                                {g.items.map((i, idx) => {
+                                  const idxGlobal = all.findIndex(x => x.id === i.id);
+                                  const isFirstGlobal = idxGlobal === 0;
+                                  const isLastGlobal = idxGlobal === all.length - 1;
+                                  const s = statusOf(idxGlobal);
+                                  const dotClass =
+                                    s === 'green' ? 'bg-status-green' :
+                                    s === 'blue' ? 'bg-[#605BFF]' :
+                                    'bg-muted-foreground/40';
+                                  let topLineClass = '';
+                                  if (!isFirstGlobal) {
+                                    const prevIdxGlobal = idxGlobal - 1;
+                                    const ps = statusOf(prevIdxGlobal);
+                                    if (ps !== 'gray' && s !== 'gray') {
+                                      topLineClass = ps === 'green' && s === 'green' ? colorGreen : colorBlue;
+                                    } else {
+                                      topLineClass = colorGray;
+                                    }
+                                  }
+                                  let bottomLineClass = '';
+                                  if (!isLastGlobal) {
+                                    const nextIdxGlobal = idxGlobal + 1;
+                                    const ns = statusOf(nextIdxGlobal);
+                                    if (s !== 'gray' && ns !== 'gray') {
+                                      bottomLineClass = s === 'green' && ns === 'green' ? colorGreen : colorBlue;
+                                    } else {
+                                      bottomLineClass = colorGray;
+                                    }
+                                  }
+                                  return (
+                                    <div
+                                      key={i.id}
+                                      ref={(el) => { stepRefs.current[i.id] = el }}
+                                      className="pl-10 cursor-pointer"
+                                      onClick={() => { 
+                                        setPulseStarted(true); 
+                                        setPulseCurrentIdx(idxGlobal); 
+                                        localStorage.setItem('pulse.started', 'true');
+                                        localStorage.setItem('pulse.currentIdx', String(idxGlobal));
+                                        localStorage.setItem('pulse.completed', 'false');
+                                        const path = stepIdToRoute(i.id);
+                                        if (path) navigate(path);
+                                      }}
+                                    >
+                                      <div className="relative">
+                                        {!isFirstGlobal && <div className={`absolute left-[-20px] top-[-12px] bottom-1/2 w-0.5 ${topLineClass}`} />}
+                                        {!isLastGlobal && <div className={`absolute left-[-20px] top-1/2 bottom-[-12px] w-0.5 ${bottomLineClass}`} />}
+                                        <div className={`absolute left-[-20px] top-1/2 -translate-x-1/2 -translate-y-1/2 h-3 w-3 rounded-full ring-2 ring-background ${dotClass}`} />
+                                        <div className="text-[11px] text-muted-foreground">{i.time} — {i.minutes} min</div>
+                                        <div className="text-sm font-medium text-foreground">{i.id === 'uncover1' ? `Review ${flaggedCallsCur} flagged calls at 2x speed` : i.title}</div>
+                                        <div className="text-[11px] text-muted-foreground">{i.id === 'prep' ? `${assessmentsSubmittedCur}/${coachingEligibleCur.length} assessments received · ${topRiskAlerts.length} CRM alerts flagged` : i.sub}</div>
                                       </div>
                                     </div>
-                                  ) : i.id === 'lead' ? (
-                                    <div className="mt-1">
-                                      <div className="text-sm text-foreground">{completedCoachingReps.length} session Completed, {upcomingCoachingReps.length} session Upcoming</div>
-                                      <div className="text-xs text-muted-foreground underline decoration-dotted">
-                                        {upcomingCoachingReps.length ? `${upcomingCoachingReps.join(', ')}` : 'No reps pending scheduling'}
-                                      </div>
-                                    </div>
-                                  ) : null}
-                                </div>
+                                  );
+                                })}
                               </div>
-                            );
-                          })}
+                              
+                            </div>
+                          ))}
                         </div>
                       );
                     })()}
@@ -1275,12 +1269,13 @@ function ManagerViewContent() {
               );
             })()}
           </div>
-          <div className="rounded-lg border border-border bg-card p-4 flex flex-col min-h-0 max-h-[calc(100vh-300px)]">
+          <div className="rounded-lg border border-border bg-card p-4">
             <div className="flex items-start justify-between mb-3">
               <div>
                 <h2 className="text-sm font-semibold text-foreground">Rep Tiering {tieringHeaderRange}</h2>
-                <div className="text-xs text-muted-foreground">AI-suggested based on Risk signals</div>
+                <div className="text-xs text-muted-foreground">AI-suggested based on Risk signals + self-assessments</div>
               </div>
+              <Button variant="ghost" size="sm" className="text-xs text-[#605BFF] hover:bg-muted" onClick={() => setTierAdjustOpen(true)}>Adjust</Button>
             </div>
             {(() => {
               const severityOf = (rep: (typeof mockAEReps)[number]) => {
@@ -1300,40 +1295,47 @@ function ManagerViewContent() {
                 return a.name.localeCompare(b.name);
               });
               return (
-                <div className="flex-1 min-h-0 overflow-y-auto pr-1" style={{ scrollbarGutter: 'stable both-edges' }}>
-                  <div className="grid grid-cols-1 gap-3">
-                    {sorted.map(rep => {
-                      const ready = rep.hygiene_score >= 80 && rep.overdue_actions === 0;
-                      const tag = severityOf(rep);
-                      const tagCls = tag === 'atRisk' ? 'bg-status-red/10 text-status-red' : tag === 'watch' ? 'bg-status-amber/10 text-status-amber' : 'bg-status-green/10 text-status-green';
-                      const tagLabel = tag === 'atRisk' ? 'At Risk' : tag === 'watch' ? 'Watch' : 'On Track';
-                      return (
-                        <div key={rep.user_id} className="rounded-lg bg-muted/40 p-3 flex items-start justify-between cursor-pointer hover:bg-[#605BFF]/10 transition-colors">
-                          <div className="flex items-start gap-3">
-                            <div className="h-9 w-9 rounded-full border flex items-center justify-center text-xs font-semibold">{getInitials(rep.name)}</div>
-                            <div>
-                              <div
-                                className="text-sm font-semibold text-foreground hover:text-[#605BFF] cursor-pointer"
-                                onClick={() => {
-                                  if (!ready) navigate(`/manager-prep?repId=${rep.user_id}`);
-                                }}
-                              >
-                                {rep.name}
-                              </div>
-                              <div className="mt-1 text-[11px] text-muted-foreground">{buildDetails(rep)}</div>
+                <div className="grid grid-cols-1 gap-3">
+                  {sorted.map(rep => {
+                    const ready = rep.hygiene_score >= 80 && rep.overdue_actions === 0;
+                    const tag = severityOf(rep);
+                    const tagCls = tag === 'atRisk' ? 'bg-status-red/10 text-status-red' : tag === 'watch' ? 'bg-status-amber/10 text-status-amber' : 'bg-status-green/10 text-status-green';
+                    const tagLabel = tag === 'atRisk' ? 'At Risk' : tag === 'watch' ? 'Watch' : 'On Track';
+                    return (
+                      <div key={rep.user_id} className="rounded-lg bg-muted/40 p-3 flex items-start justify-between cursor-pointer hover:bg-[#605BFF]/10 transition-colors">
+                        <div className="flex items-start gap-3">
+                          <div className="h-9 w-9 rounded-full border flex items-center justify-center text-xs font-semibold">{getInitials(rep.name)}</div>
+                          <div>
+                            <div
+                              className="text-sm font-semibold text-foreground hover:text-[#605BFF] cursor-pointer"
+                              onClick={() => {
+                                if (!ready) navigate(`/manager-prep?repId=${rep.user_id}`);
+                              }}
+                            >
+                              {rep.name}
                             </div>
-                          </div>
-                          <div className="flex items-center gap-2 self-center"
-                            onDoubleClick={() => {
-                              if (!ready) navigate(`/manager-prep?repId=${rep.user_id}`);
-                            }}
-                          >
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${tagCls}`}>{tagLabel}</span>
+                            <div className="mt-1 text-[11px] text-muted-foreground">{buildDetails(rep)}</div>
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
+                        <div className="flex items-center gap-2 self-center"
+                          onDoubleClick={() => {
+                            if (!ready) navigate(`/manager-prep?repId=${rep.user_id}`);
+                          }}
+                        >
+                          <button
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${ready ? 'bg-status-green/10 text-status-green' : 'bg-secondary/50 text-muted-foreground'} hover:opacity-80`}
+                            onClick={() => {
+                              if (ready) return;
+                              setNudgeTarget({ repId: rep.user_id, name: rep.name });
+                            }}
+                          >
+                            {ready ? 'ready' : 'pending'}
+                          </button>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${tagCls}`}>{tagLabel}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })()}
@@ -1369,6 +1371,50 @@ function ManagerViewContent() {
             >
               Send nudge
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={agendaAdjustOpen} onOpenChange={setAgendaAdjustOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Adjust Coaching Agenda</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm">
+            {agendaItems.map((i, idx) => (
+              <div key={i.id} className="flex items-center justify-between gap-3">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={i.included}
+                    onChange={(e) => {
+                      const next = [...agendaItems];
+                      next[idx] = { ...i, included: e.target.checked };
+                      setAgendaItems(next);
+                    }}
+                  />
+                  <span className="text-foreground">{i.time}</span>
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Minutes</span>
+                  <input
+                    type="number"
+                    min={0}
+                    className="h-8 w-20 px-2 border rounded bg-background"
+                    value={i.minutes}
+                    onChange={(e) => {
+                      const v = Number(e.target.value) || 0;
+                      const next = [...agendaItems];
+                      next[idx] = { ...i, minutes: v };
+                      setAgendaItems(next);
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="sm" className="text-xs hover:bg-muted hover:text-muted-foreground" onClick={() => setAgendaAdjustOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
