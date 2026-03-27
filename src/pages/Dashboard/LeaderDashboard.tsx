@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Settings, Play, FileDown, AlertCircle, AlertTriangle, CheckCircle, Eye, ChevronLeft, ChevronRight, Filter, X, XCircle, MoreVertical, Star } from "lucide-react";
+import { Settings, Play, FileDown, AlertCircle, AlertTriangle, CheckCircle, Eye, ChevronLeft, ChevronRight, Filter, X, XCircle, MoreVertical, Star, ArrowUpDown, BookOpen, RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/CommonComponents/PageHeader";
 import { AskSamPopup } from "@/components/CommonComponents/AskSamPopup";
@@ -50,7 +50,12 @@ class KpiContentBoundary extends React.Component<{ children: React.ReactNode }, 
 
 function ManagerViewContent() {
   const [timeRange, setTimeRange] = useState("This week");
-  const [pinnedDealIds, setPinnedDealIds] = useState<string[]>([]);
+  const updateDealIsInLoop = (id: string, val: boolean) => {
+    const idx = mockDeals.findIndex(md => md.deal_id === id);
+    if (idx >= 0) {
+      (mockDeals[idx] as Deal).isInLoop = val;
+    }
+  };
   const [stageDialog, setStageDialog] = useState<{ stage: string } | null>(null);
   const [analyticsDeal, setAnalyticsDeal] = useState<Deal | null>(null);
   const [eaPopupOpen, setEaPopupOpen] = useState(false);
@@ -593,17 +598,23 @@ function ManagerViewContent() {
     setDealSheetOpen(true);
   };
   const toggleLoopAdd = (d: Deal) => {
-    if (pinnedDealIds.includes(d.deal_id)) {
+    if (d.isInLoop) {
       setPendingRemoveDeal(d);
       setRemoveConfirmOpen(true);
     } else {
-      setPinnedDealIds(prev => Array.from(new Set([...prev, d.deal_id])));
+      updateDealIsInLoop(d.deal_id, true);
+      if (selectedDeal && selectedDeal.deal_id === d.deal_id) {
+        setSelectedDeal({ ...selectedDeal, isInLoop: true });
+      }
       showSuccess(`Successfully added ${d.account_name} / ${d.deal_name} to Pulse loop`);
     }
   };
   const confirmRemove = () => {
     if (pendingRemoveDeal) {
-      setPinnedDealIds(prev => prev.filter(id => id !== pendingRemoveDeal.deal_id));
+      updateDealIsInLoop(pendingRemoveDeal.deal_id, false);
+      if (selectedDeal && selectedDeal.deal_id === pendingRemoveDeal.deal_id) {
+        setSelectedDeal({ ...selectedDeal, isInLoop: false });
+      }
     }
     setPendingRemoveDeal(null);
     setRemoveConfirmOpen(false);
@@ -630,6 +641,7 @@ function ManagerViewContent() {
   const [priorityFilter, setPriorityFilter] = useState<'all'|'P1'|'P2'|'P3'>('all');
   const [amountMin, setAmountMin] = useState<string>('');
   const [amountMax, setAmountMax] = useState<string>('');
+  const [sortBy, setSortBy] = useState<'risk'|'amount'|'close_date'>('risk');
   const riskReasonText = (d: Deal) => {
     const first = d.risk_reasons && d.risk_reasons[0];
     if (!first) return 'No economic buyer identified';
@@ -941,6 +953,22 @@ function ManagerViewContent() {
                   </div>
                 </PopoverContent>
               </Popover>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="h-8 w-8 inline-flex items-center justify-center rounded hover:bg-gray-100"
+                    title="Sort"
+                  >
+                    <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="text-xs">
+                  <DropdownMenuItem onClick={() => setSortBy('risk')}>Risk priority</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy('amount')}>Amount (high → low)</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSortBy('close_date')}>Close date (soonest)</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <button
                 type="button"
                 className={`h-8 w-8 inline-flex items-center justify-center rounded hover:bg-gray-100 ${!riskSelected && !valueSelected && companyFilter==='all' && repFilter==='all' && stageFilter==='all' && priorityFilter==='all' && !amountMin && !amountMax ? 'opacity-50 cursor-not-allowed' : ''}`}
@@ -1008,12 +1036,18 @@ function ManagerViewContent() {
               const max = amountMax ? Number(amountMax) : undefined;
               if (typeof min === 'number' && !Number.isNaN(min)) rows = rows.filter(d => d.amount >= min);
               if (typeof max === 'number' && !Number.isNaN(max)) rows = rows.filter(d => d.amount <= max);
-              rows.sort((a, b) => {
-                const ar = riskSet.has(a.deal_id) ? 1 : 0;
-                const br = riskSet.has(b.deal_id) ? 1 : 0;
-                if (ar !== br) return br - ar;
-                return b.amount - a.amount;
-              });
+              if (sortBy === 'amount') {
+                rows.sort((a, b) => b.amount - a.amount);
+              } else if (sortBy === 'close_date') {
+                rows.sort((a, b) => new Date(a.close_date).getTime() - new Date(b.close_date).getTime());
+              } else {
+                rows.sort((a, b) => {
+                  const ar = riskSet.has(a.deal_id) ? 1 : 0;
+                  const br = riskSet.has(b.deal_id) ? 1 : 0;
+                  if (ar !== br) return br - ar;
+                  return b.amount - a.amount;
+                });
+              }
               const stake = rows.reduce((s, d) => s + d.amount, 0);
               return (
                 <div className="space-y-2">
@@ -1032,6 +1066,16 @@ function ManagerViewContent() {
                             <div className="text-sm font-medium text-foreground truncate">{d.account_name} / {d.deal_name}</div>
                           </div>
                           <div className="flex items-center gap-2 shrink-0">
+                            {d.isInLoop && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <div className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-gray-100" title="In Pulse loop">
+                                    <BookOpen className="h-4 w-4 text-[#FF8E1C]" />
+                                  </div>
+                                </TooltipTrigger>
+                                <TooltipContent>In Pulse loop</TooltipContent>
+                              </Tooltip>
+                            )}
                             {isRisk && (
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -1519,8 +1563,8 @@ function ManagerViewContent() {
                   {deriveKeyRisks(selectedDeal).map((r, i) => (<li key={i}>{r}</li>))}
                 </ul>
               </div>
-              <div className={`mt-auto ${pinnedDealIds.includes(selectedDeal.deal_id) ? 'text-status-green' : 'text-muted-foreground'} text-sm`}>
-                {pinnedDealIds.includes(selectedDeal.deal_id) ? 'This deal is in your Pulse loop' : 'This deal is not in your Pulse loop'}
+              <div className={`mt-auto ${selectedDeal.isInLoop ? 'text-status-green' : 'text-muted-foreground'} text-sm`}>
+                {selectedDeal.isInLoop ? 'This deal is in your Pulse loop' : 'This deal is not in your Pulse loop'}
               </div>
             </div>
           )}
@@ -1529,7 +1573,7 @@ function ManagerViewContent() {
               <>
                 <Button className="bg-[#605BFF] hover:bg-[#4F48E3]" size="sm" onClick={() => navigate('/leader-uncover')}>Uncover this deal</Button>
                 <Button variant="outline" size="sm" onClick={() => toggleLoopAdd(selectedDeal)}>
-                  {pinnedDealIds.includes(selectedDeal.deal_id) ? 'Remove from loop' : 'Add to loop'}
+                  {selectedDeal.isInLoop ? 'Remove from loop' : 'Add to loop'}
                 </Button>
               </>
             )}

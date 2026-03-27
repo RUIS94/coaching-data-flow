@@ -1,8 +1,8 @@
 import { PageHeader } from "@/components/CommonComponents/PageHeader";
 import { KPICard } from "@/components/CommonComponents/KPICard";
-import { mockAEReps, mockDeals, formatCurrency } from "@/data/mock";
+import { mockAEReps, mockDeals, formatCurrency, type Deal } from "@/data/mock";
 import { Button } from "@/components/ui/button";
-import { MoreVertical, Mic, MicOff, Wand2, Send } from "lucide-react";
+import { MoreVertical, Mic, MicOff, Wand2, Send, ChevronRight, Filter, XCircle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +12,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useNavigate } from "react-router-dom";
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useCallback } from "react";
 import { useToastContext } from "@/contexts/ToastContext";
 import SalesMethodologyCard from "@/components/Modules/SalesMethodologyCard";
 import BuyerJourneyCard from "@/components/Modules/BuyerJourneyCard";
@@ -20,9 +20,78 @@ import BuyerObjectionsCard from "@/components/Modules/BuyerObjectionsCard";
 import BuyerQuestionsCard from "@/components/Modules/BuyerQuestionsCard";
 import PulseFlow from "@/components/dashboard/PulseFlow";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AskSamPopup } from "@/components/CommonComponents/AskSamPopup";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function ManagerPrep() {
   const reps = mockAEReps.slice(0, 6);
+  const [selectedDealIds, setSelectedDealIds] = useState<Set<string>>(new Set());
+  const [onlyInLoop, setOnlyInLoop] = useState(true);
+  const [riskNonGreen, setRiskNonGreen] = useState(false);
+  const [stageFilter, setStageFilter] = useState<string>("all");
+  const toggleSelection = (dealId: string | null | undefined) => {
+    if (!dealId) return;
+    setSelectedDealIds(prev => {
+      const next = new Set(prev);
+      if (next.has(dealId)) next.delete(dealId);
+      else next.add(dealId);
+      return next;
+    });
+  };
+  const applyFilters = useCallback((d: Deal) => {
+    if (onlyInLoop && !d.isInLoop) return false;
+    if (riskNonGreen && d.risk_level === "GREEN") return false;
+    if (stageFilter !== "all" && d.stage_name !== stageFilter) return false;
+    return true;
+  }, [onlyInLoop, riskNonGreen, stageFilter]);
+  const selectedDeals = useMemo(() => mockDeals.filter(d => selectedDealIds.has(d.deal_id)), [selectedDealIds]);
+  const selectedTotal = useMemo(() => selectedDeals.reduce((s, d) => s + d.amount, 0), [selectedDeals]);
+  const repsInvolved = useMemo(() => {
+    const m = new Map<string, number>();
+    selectedDeals.forEach(d => m.set(d.owner_name, (m.get(d.owner_name) || 0) + 1));
+    return Array.from(m.entries()).map(([name, count]) => ({ name, count }));
+  }, [selectedDeals]);
+  const visiblePrimaryDealIds = useMemo(() => {
+    const ids: string[] = [];
+    reps.forEach(rep => {
+      const deals = mockDeals.filter(d => d.owner_name === rep.name).filter(applyFilters);
+      let primary = deals[0] as Deal | undefined;
+      if (!primary) {
+        const all = mockDeals.filter(d => d.owner_name === rep.name);
+        if (all.length > 0) {
+          primary = all.reduce((a, b) => (a.amount > b.amount ? a : b));
+        }
+      }
+      if (primary) ids.push(primary.deal_id);
+    });
+    return ids;
+  }, [applyFilters, reps]);
+  const selectAllVisible = () => {
+    setSelectedDealIds(new Set(visiblePrimaryDealIds));
+  };
+  const allVisibleSelected = useMemo(
+    () => visiblePrimaryDealIds.length > 0 && visiblePrimaryDealIds.every(id => selectedDealIds.has(id)),
+    [visiblePrimaryDealIds, selectedDealIds]
+  );
+  const toggleSelectAllVisible = () => {
+    if (allVisibleSelected) {
+      setSelectedDealIds(new Set());
+    } else {
+      selectAllVisible();
+    }
+  };
+  const clearAll = () => {
+    setSelectedDealIds(new Set());
+    setOnlyInLoop(true);
+    setRiskNonGreen(false);
+    setStageFilter("all");
+  };
+  const initials = (name: string) => {
+    const p = name.split(" ").filter(Boolean);
+    if (p.length === 0) return "";
+    if (p.length === 1) return p[0].slice(0, 2).toUpperCase();
+    return (p[0][0] + p[p.length - 1][0]).toUpperCase();
+  };
   const getTopDealFor = (repName: string) => {
     const deals = mockDeals.filter(d => d.owner_name === repName);
     if (deals.length === 0) return null;
@@ -68,7 +137,7 @@ export default function ManagerPrep() {
   };
   const timeWindowDeals = useMemo(() => mockDeals.filter(d => d.staleness_days <= 7), []);
   const repDeals = useMemo(() => timeWindowDeals.filter(d => reps.map(r => r.name).includes(d.owner_name)), [timeWindowDeals, reps]);
-  const eligibleDeals = useMemo(() => repDeals.filter(d => d.need_coaching), [repDeals]);
+  const eligibleDeals = useMemo(() => repDeals.filter(d => !!d.isInLoop), [repDeals]);
   const coachingEligibleLen = eligibleDeals.length;
   const assessmentsSubmittedCur = useMemo(() => eligibleDeals.filter(d => d.self_assessment_status === "SUBMITTED").length, [eligibleDeals]);
   const eligibleRepNames = useMemo(() => Array.from(new Set(eligibleDeals.map(d => d.owner_name))), [eligibleDeals]);
@@ -167,54 +236,87 @@ export default function ManagerPrep() {
     setIsRecording(false);
   };
 
+  const askSamQuestions = [
+    "Which reps still have pending self-assessments?",
+    "Who has top-risk coaching deals this week?",
+    "Which deal should we coach next?",
+    "Show coaching-ready deals by rep",
+    "Summarize hygiene gaps by rep"
+  ];
+  const askSamAnswer = (q: string) => {
+    if (/pending/i.test(q) || /self[- ]?assess/i.test(q)) {
+      return `Pending self-assessments: ${pendingRepNames.join(", ") || "none"}. Submitted: ${submittedRepNames.length}/${eligibleRepNames.length}.`;
+    }
+    if (/top[- ]?risk/i.test(q) || /risk/i.test(q)) {
+      const repsWithRisk = Array.from(new Set([...riskCriticalDeals, ...riskWarningDeals].map(d => d.owner_name)));
+      return `Reps with top-risk deals: ${repsWithRisk.join(", ") || "none"}. Critical: ${riskCriticalDeals.length}, Warning: ${riskWarningDeals.length}.`;
+    }
+    if (/coach next/i.test(q) || /which deal/i.test(q)) {
+      const firstRep = reps.find(r => repEligible(r.name));
+      const deal = firstRep ? mockDeals.find(d => d.owner_name === firstRep.name && d.need_coaching) : null;
+      return deal ? `Recommend coaching: ${deal.account_name} — ${deal.deal_name} (${formatCurrency(deal.amount)}), close ${formatCloseDate(deal.close_date)}.` : "No coaching-ready deals found.";
+    }
+    if (/hygiene/i.test(q) || /gaps/i.test(q)) {
+      const list = reps.map(r => `${r.name}: ${confidenceFor(r.hygiene_score)}`).join("\n");
+      return `Hygiene confidence by rep:\n${list}`;
+    }
+    return "Ask about pending self-assessments, top-risk coaching deals, or which deal to coach next.";
+  };
+
   return (
     <div className="h-full bg-white overflow-auto" style={{ scrollbarGutter: 'stable both-edges' }}>
       <div className="sticky top-0 z-20 bg-white">
         <PageHeader
-          title="P — Prepare"
-          subtitle="Snapshot of top-value and top-risk deals to coach — ~30 min"
-          titleClassName="text-2xl font-bold text-gray-900"
+          title=""
           inlineChildren
+          leftSlot={
+            <PulseFlow
+              compact
+              completeOnClick
+              initialActiveStep="prepare"
+              pageStepId="prepare"
+              onNavigateToStep={(step) => {
+                if (step === "prepare") navigate("/manager-prep");
+                else if (step === "uncover") navigate("/leader-uncover");
+                else if (step === "lead") navigate("/leader-lead");
+                else if (step === "sync") navigate("/leader-sync");
+                else if (step === "evaluate") navigate("/leader-evaluate");
+              }}
+            />
+          }
         >
-          <div className="flex items-center w-full justify-end gap-8">
-            <div className="flex items-center gap-3">
-              <Select>
-                <SelectTrigger className="w-56 h-8 text-xs bg-white">
-                  <SelectValue placeholder="All Reps" />
-                </SelectTrigger>
-                <SelectContent>
-                  {reps.map(r => (
-                    <SelectItem
-                      key={r.user_id}
-                      value={r.name}
-                      className="text-xs hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-foreground"
-                    >
-                      {r.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex-shrink-0">
-              <PulseFlow
-                compact
-                completeOnClick
-                initialActiveStep="prepare"
-                pageStepId="prepare"
-                onNavigateToStep={(step) => {
-                  if (step === "prepare") navigate("/manager-prep");
-                  else if (step === "uncover") navigate("/leader-uncover");
-                  else if (step === "lead") navigate("/leader-lead");
-                  else if (step === "sync") navigate("/leader-sync");
-                  else if (step === "evaluate") navigate("/leader-evaluate");
-                }}
-              />
-            </div>
+          <div className="flex items-center w-full justify-end gap-3">
+            <Select>
+              <SelectTrigger className="w-56 h-8 text-xs bg-white">
+                <SelectValue placeholder="All Reps" />
+              </SelectTrigger>
+              <SelectContent>
+                {reps.map(r => (
+                  <SelectItem
+                    key={r.user_id}
+                    value={r.name}
+                    className="text-xs hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-foreground"
+                  >
+                    {r.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <AskSamPopup
+              questions={askSamQuestions}
+              onGenerateAnswer={askSamAnswer}
+              triggerLabel="Ask Sam"
+              buttonClassName="gap-2 bg-white text-[#FF8E1C] border border-[#FF8E1C] hover:bg-[#FF8E1C] hover:text-white"
+              mode="sheet"
+              sheetSide="right"
+              description="Ask about self-assessment status, coaching priorities, or hygiene gaps"
+            />
           </div>
         </PageHeader>
       </div>
 
       <div className="px-6 pb-6 space-y-4">
+        {/*
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <KPICard
             label="Top Deals — Self-Assessment Completed"
@@ -234,241 +336,197 @@ export default function ManagerPrep() {
             trendPositive={true}
           />
         </div>
+        */}
 
-        <div className="rounded-lg border border-border bg-card">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-gray-50">
-            <div className="text-sm font-semibold text-foreground">Deals Ready for Coaching - Self-Assessment Completed</div>
-          </div>
-          <div className="rounded overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-border text-muted-foreground bg-secondary/40">
-                  <th className="text-left px-4 py-2 font-medium">Rep</th>
-                  <th className="text-left px-3 py-2 font-medium">Deal</th>
-                  <th className="text-left px-3 py-2 font-medium">Close Date</th>
-                  <th className="text-left px-3 py-2 font-medium">Risk</th>
-                  <th className="text-left px-3 py-2 font-medium">Help Needed</th>
-                  <th className="text-left px-3 py-2 font-medium">Forecast Category</th>
-                  <th className="text-left px-3 py-2 font-medium">Confidence</th>
-                  <th className="text-left px-3 py-2 font-medium">Status</th>
-                  <th className="text-left px-3 py-2 font-medium">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reps.map((rep) => {
-                  const top = getTopDealFor(rep.name);
-                  const helpTags = helpNeededTagsFor(rep.name);
-                  const eligible = repEligible(rep.name);
-                  const hasPending = repHasPending(rep.name);
-                  const fullySubmitted = repFullySubmitted(rep.name);
-                  const coachingDealsAll = mockDeals.filter(d => d.owner_name === rep.name && d.need_coaching);
-                  const primaryDeal = coachingDealsAll[0] || top || null;
-                  const coachingDeals = coachingDealsAll.slice(coachingDealsAll.length > 0 ? 1 : 0, 3);
-                  return (
-                    <>
-                      <tr key={rep.user_id} className="border-t border-border hover:bg-gray-50 transition-colors">
-                        <td className="py-3 px-4">
-                          <span className="font-semibold text-gray-900">{rep.name}</span>
-                        </td>
-                        {eligible ? (
-                          hasPending ? (
-                            <>
-                              <td className="py-3 px-4 italic text-muted-foreground" colSpan={6}>
-                                Not yet submitted — auto-nudge sent 15 min ago
-                              </td>
-                              <td className="py-3 px-4">
-                                <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary/50 text-muted-foreground">Pending</span>
-                              </td>
-                              <td className="py-3 px-4">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <button className="p-1 rounded hover:bg-gray-100">
-                                      <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                                    </button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem
-                                      onClick={() => {
-                                        setModulesRep(primaryDeal ? `${primaryDeal.account_name} - ${primaryDeal.deal_name}` : rep.name);
-                                        setModulesOpen(true);
-                                      }}
-                                    >
-                                      Review
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => openNudge(rep.name)}>Nudge remaining</DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </td>
-                            </>
-                          ) : fullySubmitted ? (
-                            <>
-                              <td className="py-3 px-4">
-                                {primaryDeal ? (
-                                  <div>
-                                    <div className="text-foreground">{primaryDeal.account_name} - {primaryDeal.deal_name}</div>
-                                    <div className="text-[11px] text-muted-foreground">{formatCurrency(primaryDeal.amount)} · {primaryDeal.stage_name}</div>
-                                  </div>
-                                ) : '—'}
-                              </td>
-                              <td className="py-3 px-4">{formatCloseDate(primaryDeal?.close_date ?? null)}</td>
-                              <td className="py-3 px-4">
-                                {primaryDeal && Array.isArray(primaryDeal.risk_reasons) && primaryDeal.risk_reasons.length > 0
-                                  ? prettyRiskCode(primaryDeal.risk_reasons[0].code)
-                                  : '—'}
-                              </td>
-                              <td className="py-3 px-4">
-                                <div className="flex flex-wrap gap-1">
-                                  {helpTags.length > 0 ? helpTags.map((t) => (
-                                    <span key={t} className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#605BFF]/10 text-[#605BFF]">{t}</span>
-                                  )) : <span className="text-muted-foreground text-xs">—</span>}
-                                </div>
-                              </td>
-                              <td className="py-3 px-4">
-                                {primaryDeal ? (
-                                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${forecastTagClass(primaryDeal.forecast_category)}`}>
-                                    {prettyForecast(primaryDeal.forecast_category)}
-                                  </span>
-                                ) : '—'}
-                              </td>
-                              <td className="py-3 px-4">{confidenceFor(rep.hygiene_score)}</td>
-                              <td className="py-3 px-4">
-                                <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-status-green/10 text-status-green">Submitted</span>
-                              </td>
-                              <td className="py-3 px-4">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <button className="p-1 rounded hover:bg-gray-100">
-                                      <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                                    </button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem
-                                      onClick={() => {
-                                        setModulesRep(primaryDeal ? `${primaryDeal.account_name} - ${primaryDeal.deal_name}` : rep.name);
-                                        setModulesOpen(true);
-                                      }}
-                                    >
-                                      Review
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => openNudge(rep.name)}>Update Request</DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </td>
-                            </>
-                          ) : (
-                            <>
-                              <td className="py-3 px-4 italic text-muted-foreground" colSpan={6}>
-                                Pending self-assessment — awaiting submission
-                              </td>
-                              <td className="py-3 px-4">
-                                <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary/50 text-muted-foreground">Pending</span>
-                              </td>
-                              <td className="py-3 px-4">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <button className="p-1 rounded hover:bg-gray-100">
-                                      <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                                    </button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem
-                                      onClick={() => {
-                                        setModulesRep(primaryDeal ? `${primaryDeal.account_name} - ${primaryDeal.deal_name}` : rep.name);
-                                        setModulesOpen(true);
-                                      }}
-                                    >
-                                      Review
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => openNudge(rep.name)}>Nudge remaining</DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              </td>
-                            </>
-                          )
-                        ) : (
-                          <>
-                            <td className="py-3 px-4 italic text-muted-foreground" colSpan={6}>
-                              No self-assessment requested this period
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-muted/50 text-muted-foreground">—</span>
-                            </td>
-                            <td className="py-3 px-4">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <button className="p-1 rounded hover:bg-gray-100">
-                                    <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                                  </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => navigate("/leader-lead")}>Review</DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </td>
-                          </>
-                        )}
-                      </tr>
-                      {coachingDeals.map(cd => (
-                        <tr key={`${rep.user_id}-${cd.deal_id}`} className="border-t border-border bg-secondary/20">
-                          <td className="py-2 px-4"></td>
-                          <td className="py-2 px-4">
-                            <div className="text-foreground">{cd.account_name} - {cd.deal_name}</div>
-                            <div className="text-[11px] text-muted-foreground">{formatCurrency(cd.amount)} · {cd.stage_name}</div>
-                          </td>
-                          <td className="py-2 px-4">{formatCloseDate(cd.close_date)}</td>
-                          <td className="py-2 px-4">
-                            {Array.isArray(cd.risk_reasons) && cd.risk_reasons.length > 0 ? prettyRiskCode(cd.risk_reasons[0].code) : '—'}
-                          </td>
-                          <td className="py-2 px-4">
-                            <div className="flex flex-wrap gap-1">
-                              {Array.isArray(cd.help_needed) && cd.help_needed.length > 0
-                                ? cd.help_needed.slice(0, 3).map(t => (
-                                    <span key={t} className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#605BFF]/10 text-[#605BFF]">{t}</span>
-                                  ))
-                                : <span className="text-muted-foreground text-xs">—</span>}
-                            </div>
-                          </td>
-                          <td className="py-2 px-4">
-                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${forecastTagClass(cd.forecast_category)}`}>{prettyForecast(cd.forecast_category)}</span>
-                          </td>
-                          <td className="py-2 px-4">—</td>
-                          <td className="py-2 px-4">
-                            {cd.self_assessment_status === 'SUBMITTED' ? (
-                              <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-status-green/10 text-status-green">Submitted</span>
-                            ) : (cd.self_assessment_status === 'PENDING' || cd.self_assessment_status === 'TODO') ? (
-                              <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary/50 text-muted-foreground">Pending</span>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="rounded-lg border border-border bg-card lg:col-span-2 h-full">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-gray-50">
+              <div className="text-sm font-semibold text-foreground">Select Deals to Focus On</div>
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="ghost" className="h-7 px-1 text-xs" onClick={toggleSelectAllVisible}>
+                  {allVisibleSelected ? "Unselect all" : "Select all"}
+                </Button>
+                <span className="inline-flex items-center h-7 w-7 justify-center rounded-md hover:bg-[#FF8E1C]/10 transition-colors cursor-default">
+                  <Filter className="h-4 w-4" style={{ color: "#FF8E1C" }} />
+                </span>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={clearAll} title="Clear filters & selection">
+                  <XCircle className="h-4 w-4 text-muted-foreground" />
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    if (selectedDeals.length === 0) return;
+                    showSuccess(`Selected ${selectedDeals.length} deals (${formatCurrency(selectedTotal)}).`);
+                    navigate("/leader-uncover");
+                  }}
+                  className="text-xs"
+                >
+                  Confirm Selection
+                  <ChevronRight className="h-4 w-4 ml-1" />
+                  Uncover
+                </Button>
+              </div>
+            </div>
+            <div className="p-3 space-y-2 max-h-[75vh] overflow-y-auto">
+              {reps.map((rep) => {
+              const top = getTopDealFor(rep.name);
+              const helpTags = helpNeededTagsFor(rep.name);
+              const eligible = repEligible(rep.name);
+              const hasPending = repHasPending(rep.name);
+              const fullySubmitted = repFullySubmitted(rep.name);
+                  const coachingDealsAll = mockDeals.filter(d => d.owner_name === rep.name).filter(applyFilters);
+              const primaryDeal = coachingDealsAll[0] || top || null;
+              const statusCls =
+                eligible
+                  ? hasPending
+                    ? "bg-secondary/50 text-muted-foreground"
+                    : fullySubmitted
+                    ? "bg-status-green/10 text-status-green"
+                    : "bg-secondary/50 text-muted-foreground"
+                  : "bg-muted/50 text-muted-foreground";
+              const statusText =
+                eligible
+                  ? hasPending
+                    ? "Pending"
+                    : fullySubmitted
+                    ? "Submitted"
+                    : "Pending"
+                  : "—";
+              const riskText =
+                primaryDeal && Array.isArray(primaryDeal.risk_reasons) && primaryDeal.risk_reasons.length > 0
+                  ? prettyRiskCode(primaryDeal.risk_reasons[0].code)
+                  : "—";
+                const checked = primaryDeal ? selectedDealIds.has(primaryDeal.deal_id) : false;
+                return (
+                  <div
+                    key={rep.user_id}
+                    className="border border-border rounded-lg bg-card p-2 hover:bg-gray-50 cursor-pointer"
+                    role="button"
+                    onClick={() => toggleSelection(primaryDeal?.deal_id)}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div onClick={e => e.stopPropagation()}>
+                          <Checkbox checked={checked} onCheckedChange={() => toggleSelection(primaryDeal?.deal_id)} />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-[13px] font-medium text-foreground truncate">
+                            {primaryDeal ? `${primaryDeal.account_name} - ${primaryDeal.deal_name}` : "—"}
+                          </div>
+                        </div>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className="h-8 w-8 inline-flex items-center justify-center rounded hover:bg-gray-100"
+                            onClick={e => e.stopPropagation()}
+                          >
+                            <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setModulesRep(primaryDeal ? `${primaryDeal.account_name} - ${primaryDeal.deal_name}` : rep.name);
+                              setModulesOpen(true);
+                            }}
+                          >
+                            Review
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openNudge(rep.name)}>{hasPending ? "Nudge remaining" : "Update Request"}</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    <div className="mt-1 space-y-1 text-xs">
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <div className="inline-flex items-center gap-1">
+                          <span className="text-muted-foreground">Amount</span>
+                          <span className="text-foreground">{primaryDeal ? formatCurrency(primaryDeal.amount) : "—"}</span>
+                        </div>
+                        <div className="inline-flex items-center gap-1">
+                          <span className="text-muted-foreground">Rep</span>
+                          <span className="text-foreground">{rep.name}</span>
+                        </div>
+                        <div className="inline-flex items-center gap-1">
+                          <span className="text-muted-foreground">Stage</span>
+                          <span className="text-foreground">{primaryDeal ? primaryDeal.stage_name : "—"}</span>
+                        </div>
+                        <div className="inline-flex items-center gap-1">
+                          <span className="text-muted-foreground">Close Date</span>
+                          <span className="text-foreground">{primaryDeal ? formatCloseDate(primaryDeal.close_date) : "—"}</span>
+                        </div>
+                        <div className="inline-flex items-center gap-1">
+                          <span className="text-muted-foreground">Risk</span>
+                          <span className="text-foreground">{riskText}</span>
+                        </div>
+                        <div className="inline-flex items-center gap-1">
+                          <span className="text-muted-foreground">Forecast</span>
+                          <span className="text-foreground">
+                            {primaryDeal ? (
+                              <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${forecastTagClass(primaryDeal.forecast_category)}`}>
+                                {prettyForecast(primaryDeal.forecast_category)}
+                              </span>
                             ) : (
-                              <span className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-secondary/50 text-muted-foreground">—</span>
+                              "—"
                             )}
-                          </td>
-                          <td className="py-2 px-4">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <button className="p-1 rounded hover:bg-gray-100">
-                                  <MoreVertical className="h-4 w-4 text-muted-foreground" />
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setModulesRep(`${cd.account_name} - ${cd.deal_name}`);
-                                    setModulesOpen(true);
-                                  }}
-                                >
-                                  Review
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => openNudge(rep.name)}>Coaching</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => openNudge(rep.name)}>Update Request</DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </td>
-                        </tr>
-                      ))}
-                    </>
-                  );
-                })}
-              </tbody>
-            </table>
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                        <div className="inline-flex items-center gap-1">
+                          <span className="text-muted-foreground">Confidence</span>
+                          <span className="text-foreground">{confidenceFor(rep.hygiene_score)}</span>
+                        </div>
+                        <div className="inline-flex items-center gap-1">
+                          <span className="text-muted-foreground">Status</span>
+                          <span className={`inline-flex px-2 py-0.5 rounded-full text-[11px] font-medium ${statusCls}`}>{statusText}</span>
+                        </div>
+                        <div className="inline-flex items-center gap-1">
+                          <span className="text-muted-foreground">Help</span>
+                        {helpTags.length > 0
+                          ? helpTags.map((t) => (
+                              <span key={t} className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-[#605BFF]/10 text-[#605BFF]">
+                                {t}
+                              </span>
+                            ))
+                          : <span className="text-muted-foreground">—</span>}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          <div className="flex flex-col gap-4 h-full">
+            <div className="rounded-lg border border-border bg-card flex flex-col flex-1 overflow-hidden">
+              <div className="px-4 py-3 border-b border-border bg-gray-50 text-sm font-semibold text-foreground">Why These Deals?</div>
+              <div className="p-4 text-sm text-foreground flex-1 overflow-y-auto">
+                {selectedDeals.length > 0 ? (
+                  <span>These {selectedDeals.length} deals represent {formatCurrency(selectedTotal)} in pipeline and have the highest coaching leverage — small interventions here yield outsized results based on historical patterns.</span>
+                ) : (
+                  <span>Select deals to see why they are prioritized for coaching.</span>
+                )}
+              </div>
+            </div>
+            <div className="rounded-lg border border-border bg-card flex flex-col flex-1 overflow-hidden">
+              <div className="px-4 py-3 border-b border-border bg-gray-50 text-sm font-semibold text-foreground">Reps Involved</div>
+              <div className="p-4 flex-1 overflow-y-auto">
+                {repsInvolved.length > 0 ? (
+                  <div className="flex flex-wrap gap-3">
+                    {repsInvolved.map(({ name, count }) => (
+                      <div key={name} className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-border">
+                        <div className="h-7 w-7 rounded-full bg-muted flex items-center justify-center text-xs text-foreground">{initials(name)}</div>
+                        <div className="text-sm text-foreground">{name}</div>
+                        <div className="text-[11px] px-1.5 py-0.5 rounded-full bg-secondary/50 text-muted-foreground">{count}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-sm text-muted-foreground">No reps selected yet.</div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

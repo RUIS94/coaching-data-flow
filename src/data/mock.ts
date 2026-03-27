@@ -32,6 +32,7 @@ export interface Deal {
   need_coaching?: boolean;
   self_assessment_status?: SelfAssessmentStatus;
   help_needed?: string[];
+  isInLoop?: boolean;
 }
 
 export interface AERep {
@@ -103,6 +104,7 @@ export const mockDeals: Deal[] = [
     forecast_category: 'COMMIT', close_date: dateInDays(22), risk_score: 78,
     risk_level: 'RED', risk_reasons: [risk('COMMIT_AT_RISK', 'RED'), risk('SINGLE_THREADED', 'RED'), risk('NO_MAP', 'AMBER')],
     staleness_days: 12, stage_dwell_days: 21, next_step: null, impact_rank: 1,
+    isInLoop: true,
   },
   {
     deal_id: '2', deal_name: 'Data Analytics Suite', account_name: 'TechFlow Inc',
@@ -112,6 +114,7 @@ export const mockDeals: Deal[] = [
     staleness_days: 5, stage_dwell_days: 14, next_step: { description: 'Security review call', date: dateInDays(4), is_buyer_confirmed: true }, impact_rank: 2,
     need_coaching: true, self_assessment_status: 'SUBMITTED',
     help_needed: ['Intro to their CFO', 'Deal strategy for compelling event'],
+    isInLoop: true,
   },
   {
     deal_id: '3', deal_name: 'Cloud Migration Package', account_name: 'GlobalBank',
@@ -121,6 +124,7 @@ export const mockDeals: Deal[] = [
     staleness_days: 3, stage_dwell_days: 28, next_step: { description: 'Workshop with IT team', date: dateInDays(6), is_buyer_confirmed: false }, impact_rank: 3,
     need_coaching: true, self_assessment_status: 'SUBMITTED',
     help_needed: ['Competitive positioning help'],
+    isInLoop: true,
   },
   {
     deal_id: '4', deal_name: 'Security Compliance Tool', account_name: 'MedHealth',
@@ -146,6 +150,7 @@ export const mockDeals: Deal[] = [
     staleness_days: 2, stage_dwell_days: 10, next_step: { description: 'Budget approval meeting', date: dateInDays(12), is_buyer_confirmed: true }, impact_rank: 6,
     need_coaching: true, self_assessment_status: 'SUBMITTED',
     help_needed: ['Executive alignment'],
+    isInLoop: false,
   },
   {
     deal_id: '7', deal_name: 'Customer Success Platform', account_name: 'RetailMax',
@@ -162,6 +167,7 @@ export const mockDeals: Deal[] = [
     forecast_category: 'COMMIT', close_date: dateInDays(20), risk_score: 82,
     risk_level: 'RED', risk_reasons: [risk('COMMIT_AT_RISK', 'RED'), risk('CLOSE_DATE_MOVED', 'RED'), risk('MISSING_EB', 'RED')],
     staleness_days: 9, stage_dwell_days: 24, next_step: null, impact_rank: 8,
+    isInLoop: true,
   },
   // Hygiene-rich examples across more AEs
   {
@@ -172,6 +178,7 @@ export const mockDeals: Deal[] = [
     staleness_days: 4, stage_dwell_days: 9, next_step: null, impact_rank: 9,
     need_coaching: true, self_assessment_status: 'SUBMITTED',
     help_needed: ['Executive alignment', 'Next step coaching'],
+    isInLoop: true,
   },
   {
     deal_id: '10', deal_name: 'Support Automation', account_name: 'HelpDeskCo',
@@ -181,6 +188,7 @@ export const mockDeals: Deal[] = [
     staleness_days: 6, stage_dwell_days: 12, next_step: { description: 'EB sign-off', date: dateInDays(10), is_buyer_confirmed: true }, impact_rank: 10,
     need_coaching: true, self_assessment_status: 'SUBMITTED',
     help_needed: ['Proof points'],
+    isInLoop: true,
   },
   {
     deal_id: '11', deal_name: 'Compliance Suite', account_name: 'SecureBank',
@@ -190,6 +198,7 @@ export const mockDeals: Deal[] = [
     staleness_days: 3, stage_dwell_days: 17, next_step: { description: 'Legal review', date: dateInDays(5), is_buyer_confirmed: false }, impact_rank: 11,
     need_coaching: true, self_assessment_status: 'SUBMITTED',
     help_needed: ['Competitive positioning help', 'Multi-threading stakeholders'],
+    isInLoop: true,
   },
   {
     deal_id: '12', deal_name: 'API Observability', account_name: 'DevOps Labs',
