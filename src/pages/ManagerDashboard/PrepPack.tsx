@@ -9,7 +9,7 @@ import { mockDeals, formatCurrency } from "@/data/mock";
 import { Progress } from "@/components/ui/progress";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
+import { useToastContext } from "@/contexts/ToastContext";
 
 const topDeals = mockDeals.slice(0, 3);
 const prepQuestions = [
@@ -22,7 +22,7 @@ const prepQuestions = [
 
 export default function PrepPack() {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { showSuccess } = useToastContext();
   const [expandedDeal, setExpandedDeal] = useState<string | null>(topDeals[0].deal_id);
   const completedFields = 7;
   const totalFields = 10;
@@ -55,12 +55,7 @@ export default function PrepPack() {
           variant="secondary"
           size="sm"
           className="hover:bg-primary/10 active:bg-primary/15 transition-colors"
-          onClick={() =>
-            toast({
-              title: "Saved",
-              description: "Your prep pack changes have been saved.",
-            })
-          }
+          onClick={() => showSuccess("Saved — Your prep pack changes have been saved.")}
         >
           <SaveIcon className="h-3.5 w-3.5 mr-1.5" />Save
         </Button>
@@ -68,12 +63,7 @@ export default function PrepPack() {
           variant="secondary"
           size="sm"
           className="hover:bg-primary/10 active:bg-primary/15 transition-colors"
-          onClick={() =>
-            toast({
-              title: "Reminder sent",
-              description: "A reminder has been sent to the AE.",
-            })
-          }
+          onClick={() => showSuccess("Reminder sent — A reminder has been sent to the AE.")}
         >
           <Bell className="h-3.5 w-3.5 mr-1.5" />Send Reminder
         </Button>

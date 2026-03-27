@@ -45,6 +45,17 @@ export const useToast = () => {
     return addToast(message, 'info', duration);
   }, [addToast]);
 
+  const toast = useCallback(
+    (opts: { title?: string; description?: string; variant?: 'default' | 'destructive'; duration?: number }) => {
+      const message = [opts.title, opts.description].filter(Boolean).join(' — ') || 'Done';
+      if (opts.variant === 'destructive') {
+        return showError(message, opts.duration);
+      }
+      return showSuccess(message, opts.duration);
+    },
+    [showSuccess, showError]
+  );
+
   return {
     toasts,
     addToast,
@@ -53,7 +64,8 @@ export const useToast = () => {
     showSuccess,
     showAlert,
     showError,
-    showInfo
+    showInfo,
+    toast
   };
 };
 

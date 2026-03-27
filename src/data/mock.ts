@@ -120,7 +120,7 @@ export const mockDeals: Deal[] = [
     deal_id: '3', deal_name: 'Cloud Migration Package', account_name: 'GlobalBank',
     owner_name: 'Sarah Chen', amount: 420000, stage_name: 'Discovery',
     forecast_category: 'BEST_CASE', close_date: dateInDays(40), risk_score: 52,
-    risk_level: 'AMBER', risk_reasons: [risk('STAGE_STUCK', 'AMBER'), risk('WEAK_VALUE', 'AMBER')],
+    risk_level: 'RED', risk_reasons: [risk('STAGE_STUCK', 'AMBER'), risk('WEAK_VALUE', 'AMBER')],
     staleness_days: 3, stage_dwell_days: 28, next_step: { description: 'Workshop with IT team', date: dateInDays(6), is_buyer_confirmed: false }, impact_rank: 3,
     need_coaching: true, self_assessment_status: 'SUBMITTED',
     help_needed: ['Competitive positioning help'],

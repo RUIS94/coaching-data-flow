@@ -8,7 +8,7 @@ import { mockDeals, formatCurrency } from "@/data/mock";
 import { ForecastBadge } from "@/components/CommonComponents/StatusDot";
 import { RiskChipSet } from "@/components/CommonComponents/RiskChip";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useToast } from "@/hooks/use-toast";
+import { useToastContext } from "@/contexts/ToastContext";
 
 const steps = [
   { id: 'snapshot', label: 'Snapshot', done: false },
@@ -32,7 +32,7 @@ const impactDimensions = [
 
 export default function RunSession() {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const { showSuccess, showInfo, showError } = useToastContext();
   const [activeStep, setActiveStep] = useState('snapshot');
   const [isRecording, setIsRecording] = useState(false);
   const [timer, setTimer] = useState('00:00');
@@ -135,10 +135,7 @@ export default function RunSession() {
                   } else {
                     const idx = steps.findIndex((s) => s.id === step.id);
                     const prevLabel = idx > 0 ? steps[idx - 1].label : null;
-                    toast({
-                      title: "Complete previous step",
-                      description: prevLabel ? `Please complete "${prevLabel}" first.` : "Please continue sequentially.",
-                    });
+                    showInfo(`Complete previous step — ${prevLabel ? `Please complete "${prevLabel}" first.` : "Please continue sequentially."}`);
                   }
                 }}
                 className={`flex items-center gap-2 w-full px-3 py-2 rounded-md text-left text-xs transition-colors ${
@@ -236,7 +233,7 @@ export default function RunSession() {
                           className="text-xs h-7 hover:bg-primary/10 active:bg-primary/15 transition-colors"
                           onClick={() => {
                             setCommitDecision((prev) => ({ ...prev, [deal.deal_id]: 'KEEP' }));
-                            toast({ title: 'Kept as Commit', description: `${deal.account_name} / ${deal.deal_name}` });
+                            showSuccess(`Kept as Commit — ${deal.account_name} / ${deal.deal_name}`);
                           }}
                         >
                           Yes
@@ -247,7 +244,7 @@ export default function RunSession() {
                           className="text-xs h-7 hover:bg-primary/10 active:bg-primary/15 transition-colors"
                           onClick={() => {
                             setCommitDecision((prev) => ({ ...prev, [deal.deal_id]: 'DOWNGRADE' }));
-                            toast({ title: 'Downgraded', description: `${deal.account_name} / ${deal.deal_name}` });
+                            showInfo(`Downgraded — ${deal.account_name} / ${deal.deal_name}`);
                           }}
                         >
                           Downgrade
@@ -334,7 +331,7 @@ export default function RunSession() {
                             variant="secondary"
                             size="sm"
                             className="text-xs hover:bg-primary/10 active:bg-primary/15 transition-colors"
-                            onClick={() => toast({ title: 'Decision recorded', description: `${deal.account_name} / ${deal.deal_name}: ${d}` })}
+                            onClick={() => showSuccess(`Decision recorded — ${deal.account_name} / ${deal.deal_name}: ${d}`)}
                           >
                             {d}
                           </Button>
@@ -548,9 +545,9 @@ export default function RunSession() {
                   setActions((prev) => [...prev, { ...newAction, done: false }]);
                   setActionDialogOpen(false);
                   setNewAction({ title: '', owner: '', due: '' });
-                  toast({ title: 'Action added', description: `${newAction.title}` });
+                  showSuccess(`Action added — ${newAction.title}`);
                 } else {
-                  toast({ title: 'Title required', description: 'Please enter a title for the action.' });
+                  showError('Title required — Please enter a title for the action.');
                 }
               }}
             >
@@ -575,7 +572,7 @@ export default function RunSession() {
               onClick={() => {
                 setEndDialogOpen(false);
                 setSessionEnded(true);
-                toast({ title: 'Session ended', description: 'You can now generate the summary.' });
+                showSuccess('Session ended — You can now generate the summary.');
               }}
             >
               Confirm

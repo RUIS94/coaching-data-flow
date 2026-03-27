@@ -2,7 +2,7 @@ import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, TrendingUp, AlertTriangle, DollarSign, Calendar, Users, Clock, BookOpen } from "lucide-react";
 import { salesReps, getRepDeals, type Deal } from "@/data/dashboardData";
 import HealthBadge from "@/components/dashboard/HealthBadge";
-import { toast } from "sonner";
+import { useToastContext } from "@/contexts/ToastContext";
 import { useState } from "react";
 
 const DealDrillDown = () => {
@@ -10,6 +10,7 @@ const DealDrillDown = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const highlightDeal = searchParams.get("deal");
+  const { showSuccess, showInfo } = useToastContext();
 
   const rep = salesReps.find((r) => r.id === repId);
   const repDeals = getRepDeals(repId ?? "");
@@ -35,10 +36,10 @@ const DealDrillDown = () => {
       const next = new Set(prev);
       if (next.has(dealId)) {
         next.delete(dealId);
-        toast.info("Removed from coaching");
+        showInfo("Removed from coaching");
       } else {
         next.add(dealId);
-        toast.success("Marked for coaching");
+        showSuccess("Marked for coaching");
       }
       return next;
     });

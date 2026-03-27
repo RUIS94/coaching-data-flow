@@ -1,6 +1,6 @@
 import { Send, BookOpen, CalendarPlus, Paperclip, StickyNote, CheckCircle2 } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
+import { useToastContext } from "@/contexts/ToastContext";
 
 interface Props {
   dealName: string;
@@ -15,6 +15,7 @@ const CoachingRequestPanel = ({ dealName, repName, prefillTopic, prefillReason }
   const [materials, setMaterials] = useState("");
   const [attachInsights, setAttachInsights] = useState(true);
   const [sent, setSent] = useState(false);
+  const { showError, showSuccess, showInfo } = useToastContext();
 
   // Sync prefill
   if (prefillTopic && prefillTopic !== topic && !sent) {
@@ -24,21 +25,19 @@ const CoachingRequestPanel = ({ dealName, repName, prefillTopic, prefillReason }
 
   const handleSend = () => {
     if (!topic.trim()) {
-      toast.error("Please enter a coaching topic");
+      showError("Please enter a coaching topic");
       return;
     }
     setSent(true);
-    toast.success(`Coaching request sent to ${repName}`, {
-      description: `Topic: ${topic}`,
-    });
+    showSuccess(`Coaching request sent to ${repName} — Topic: ${topic}`);
   };
 
   const handleSchedule = () => {
-    toast.info("Coaching session scheduled (demo)");
+    showInfo("Coaching session scheduled (demo)");
   };
 
   const handleMarkCoaching = () => {
-    toast.success(`"${dealName}" marked as Needs Coaching`);
+    showSuccess(`"${dealName}" marked as Needs Coaching`);
   };
 
   if (sent) {

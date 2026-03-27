@@ -49,43 +49,92 @@ export default function LeaderUncover() {
   const riskColor = (lvl?: string | null) => (lvl === "RED" ? "#FF3B30" : lvl === "AMBER" ? "#FF8E1C" : "#16A34A");
   const evidenceForDeal = (d: Deal | null) => {
     if (!d) return [];
-    const rep = d.owner_name;
-    return [
-      {
-        title: "Call on Mar 12",
-        content: `${rep} asked about timeline but never explored who signs off on budget. Prospect said "we need to run it by leadership" but no follow-up was scheduled.`,
-        value: 7,
-      },
-      {
-        title: "Email on Mar 14",
-        content: `Prospect asked for a price breakdown. No confirmation of evaluation criteria or decision process.`,
-        value: 6,
-      },
-      {
-        title: "Call on Mar 18",
-        content: `Champion mentioned legal review but there was no alignment on target close date.`,
-        value: 6,
-      },
-    ];
+    const rep = d.owner_name || "Rep";
+    const codes = Array.isArray(d.risk_reasons) ? d.risk_reasons.map(r => r.code) : [];
+    const out: { title: string; content: string; value: number }[] = [];
+    if (codes.includes("MISSING_EB")) {
+      out.push({ title: "Call note", content: `${rep} discussed timeline but did not identify the economic buyer. No follow-up to reach an approver.`, value: 7 });
+    }
+    if (codes.includes("SINGLE_THREADED")) {
+      out.push({ title: "Account activity", content: `Communication focused on a single champion for 2+ weeks. No outreach to finance or procurement.`, value: 6 });
+    }
+    if (codes.includes("NO_NEXT_STEP_DATE")) {
+      out.push({ title: "CRM update", content: `Next step missing a target date. Last meeting ended without confirmation of when to reconnect.`, value: 6 });
+    }
+    if (codes.includes("CLOSE_DATE_MOVED")) {
+      out.push({ title: "Forecast change", content: `Close date was pushed out recently without added milestones. Decision process remains unclear.`, value: 5 });
+    }
+    if (codes.includes("WEAK_VALUE")) {
+      out.push({ title: "Evaluation gap", content: `Prospect asked pricing questions but no agreement on value metrics or success criteria.`, value: 6 });
+    }
+    if (codes.includes("LOW_ACTIVITY")) {
+      out.push({ title: "Engagement", content: `Low recent activity. No meetings or emails from the buying group logged in the last 10 days.`, value: 5 });
+    }
+    if (out.length === 0) {
+      out.push({ title: "Pipeline note", content: `${rep} scheduled follow-up but no confirmation on who signs off.`, value: 6 });
+      out.push({ title: "Risk indicator", content: `Stage ${d.stage_name} with approaching close date and limited stakeholder coverage.`, value: 5 });
+    }
+    return out.slice(0, 3);
   };
   const skillsForDeal = (d: Deal | null) => {
     if (!d) return [];
-    const s = [
-      { name: "Executive Alignment", score: 55 },
-      { name: "Discovery Depth", score: 62 },
-      { name: "Next Step Clarity", score: 48 },
-      { name: "Multi-threading", score: 44 },
+    const codes = Array.isArray(d.risk_reasons) ? d.risk_reasons.map(r => r.code) : [];
+    const clamp = (n: number) => Math.max(25, Math.min(95, Math.round(n)));
+    let exec = 70;
+    let disc = 70;
+    let next = 70;
+    let multi = 70;
+    if (codes.includes("MISSING_EB")) exec -= 25;
+    if (codes.includes("SINGLE_THREADED")) multi -= 30;
+    if (codes.includes("NO_NEXT_STEP_DATE")) next -= 30;
+    if (codes.includes("WEAK_VALUE")) disc -= 15;
+    if (codes.includes("STAGE_STUCK")) disc -= 20;
+    if (codes.includes("CLOSE_DATE_MOVED")) next -= 10;
+    if (codes.includes("COMMIT_AT_RISK")) { exec -= 10; next -= 10; }
+    if (codes.includes("LOW_ACTIVITY")) disc -= 20;
+    if (codes.includes("NO_MAP")) next -= 15;
+    return [
+      { name: "Executive Alignment", score: clamp(exec) },
+      { name: "Discovery Depth", score: clamp(disc) },
+      { name: "Next Step Clarity", score: clamp(next) },
+      { name: "Multi-threading", score: clamp(multi) },
     ];
-    return s;
   };
   const planForDeal = (d: Deal | null) => {
     if (!d) return [];
-    return [
-      `Ask: "Beyond yourself, who else needs to approve this investment?"`,
-      "Tactic: Request intro to VP Procurement via LinkedIn mutual",
-      "Follow up: Confirm champion’s new role and re-validate priority",
-      "Confirm: Legal redlines are minor — estimated 5-day turnaround",
-    ];
+    const codes = Array.isArray(d.risk_reasons) ? d.risk_reasons.map(r => r.code) : [];
+    const out: string[] = [];
+    if (codes.includes("MISSING_EB")) {
+      out.push(`Ask: "Who approves budget for ${d.deal_name} and can we involve them this week?"`);
+      out.push("Tactic: Request executive intro through champion or mutual connection");
+    }
+    if (codes.includes("SINGLE_THREADED")) {
+      out.push("Tactic: Map stakeholders and request introductions to finance and procurement");
+      out.push("Follow up: Confirm multi-threading plan and next meeting invites");
+    }
+    if (codes.includes("NO_NEXT_STEP_DATE")) {
+      out.push("Confirm: Next step and target date at the end of each call");
+    }
+    if (codes.includes("CLOSE_DATE_MOVED")) {
+      out.push("Re-plan: Validate decision process and align on milestones to close");
+    }
+    if (codes.includes("WEAK_VALUE")) {
+      out.push("Value: Align on measurable outcomes and agree on evaluation criteria");
+    }
+    if (codes.includes("NO_MAP")) {
+      out.push("Create: Mutual action plan with owners and dates");
+    }
+    if (codes.includes("LOW_ACTIVITY")) {
+      out.push("Engage: Schedule stakeholder follow-ups and send a recap with agreed actions");
+    }
+    if (codes.includes("COMMIT_AT_RISK")) {
+      out.push("Mitigate: Review risk drivers and add exec checkpoint before forecast lock");
+    }
+    if (out.length === 0) {
+      out.push(`Ask: "What would prevent ${d.deal_name} from closing on time?"`);
+      out.push("Tactic: Confirm next step, decision process, and stakeholder list");
+    }
+    return out.slice(0, 6);
   };
   const [evidOpen, setEvidOpen] = useState(false);
   const [evidItem, setEvidItem] = useState<{ title: string; content: string; value: number } | null>(null);

@@ -15,12 +15,13 @@ import StakeholderMap from "@/components/deal-analytics/StakeholderMap";
 import CoachingSuggestions from "@/components/deal-analytics/CoachingSuggestions";
 import CoachingRequestPanel from "@/components/deal-analytics/CoachingRequestPanel";
 import { useState } from "react";
-import { toast } from "sonner";
+import { useToastContext } from "@/contexts/ToastContext";
 
 const DealAnalytics = () => {
   const { dealId } = useParams();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { showSuccess } = useToastContext();
 
   const deal = deals.find((d) => d.id === dealId);
   const rep = deal ? salesReps.find((r) => r.id === deal.repId) : null;
@@ -57,11 +58,11 @@ const DealAnalytics = () => {
   };
 
   const handleShareInsights = () => {
-    toast.success(`Deal insights shared with ${rep.name}`);
+    showSuccess(`Deal insights shared with ${rep.name}`);
   };
 
   const handleSaveNotes = () => {
-    toast.success("Private coaching notes saved");
+    showSuccess("Private coaching notes saved");
     setShowNotes(false);
   };
 

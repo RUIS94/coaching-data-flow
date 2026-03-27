@@ -1,8 +1,8 @@
-import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastProvider, useToastContext } from "@/contexts/ToastContext";
 import ToastManager from "@/components/CommonComponents/ToastManager";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createPortal } from "react-dom";
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import { Heart, Plus, Bell, Mail, Menu, Gauge, Calendar, ClipboardList, LayoutDashboard, BarChart3, Users2, Video, Folder, ChevronDown } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -33,7 +33,10 @@ const queryClient = new QueryClient();
 
 const ToastRenderer = () => {
   const { toasts, removeToast } = useToastContext();
-  return <ToastManager toasts={toasts} onRemoveToast={removeToast} />;
+  if (typeof document === "undefined") return null;
+  const hosts = document.querySelectorAll("[data-toast-portal-host]");
+  const host = hosts.length ? (hosts[hosts.length - 1] as Element) : document.body;
+  return createPortal(<ToastManager toasts={toasts} onRemoveToast={removeToast} />, host);
 };
 
 const App = () => {
@@ -345,7 +348,6 @@ const App = () => {
               </div>
               <div className={`${isNavCollapsed ? "ml-20" : "ml-64"} mt-12 h-[calc(100vh-3rem)] overflow-y-auto transition-all duration-300`}>
                 <div className="h-full">
-                  <Sonner />
                   <ToastRenderer />
                   <Routes>
                     <Route path="/" element={<Index />} />

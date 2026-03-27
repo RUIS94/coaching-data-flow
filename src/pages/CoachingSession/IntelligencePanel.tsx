@@ -12,7 +12,7 @@ import {
   Sparkles,
   Save,
 } from "lucide-react";
-import { toast } from "sonner";
+import { useToastContext } from "@/contexts/ToastContext";
 
 const agendaItems = [
   { label: "Introduction & Rapport", done: true },
@@ -43,6 +43,7 @@ const currentQuestion = '"How does your security stack compare to SOC2 requireme
 export default function IntelligencePanel() {
   const [notes, setNotes] = useState("");
   const [saved, setSaved] = useState(false);
+  const { showSuccess } = useToastContext();
 
   const insertSuggestion = (text: string) => {
     setNotes((prev) => (prev ? prev + "\n" + text : text));
@@ -50,7 +51,7 @@ export default function IntelligencePanel() {
 
   const handleSave = () => {
     setSaved(true);
-    toast.success("Notes saved successfully");
+    showSuccess("Notes saved successfully");
     setTimeout(() => setSaved(false), 1500);
   };
 

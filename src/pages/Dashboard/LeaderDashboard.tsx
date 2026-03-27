@@ -725,7 +725,7 @@ function ManagerViewContent() {
     <div className="flex flex-col min-h-0 h-full bg-white">
       <div className="flex-1 overflow-y-auto min-h-0" style={{ scrollbarGutter: 'stable both-edges' }}>
         <div className="sticky top-0 z-20 bg-white">
-          <PageHeader title="Coaching Dashboard" subtitle={headerSubtitle} titleClassName="text-2xl font-bold text-gray-900" inlineChildren>
+          <PageHeader title="Dashboard" subtitle={headerSubtitle} titleClassName="text-2xl font-bold text-gray-900" inlineChildren>
             <div className="flex items-center w-full justify-end gap-8">
               <div className="flex items-center gap-3">
                 <Select value={timeRange} onValueChange={setTimeRange}>
@@ -749,6 +749,24 @@ function ManagerViewContent() {
                 sheetSide="right"
                 description="Ask about risky deals, value, hygiene gaps, or coaching priorities"
               />
+              {(() => {
+                const allLen = agendaItems.filter(i => i.included).length;
+                const finishedHeader = pulseCompleted || (pulseStarted && pulseCurrentIdx >= allLen);
+                if (finishedHeader) {
+                  return (
+                    <span className="text-xs font-semibold text-[#605BFF]">Complete Pulse Loop</span>
+                  );
+                }
+                return (
+                  <Button
+                    size="sm"
+                    className="bg-[#605BFF] hover:bg-[#4F48E3]"
+                    onClick={startOrResumePulse}
+                  >
+                    {pulseStarted ? 'Resume Pulse Loop' : 'Start Pulse Loop'}
+                  </Button>
+                );
+              })()}
             </div>
           </PageHeader>
         </div>
@@ -1129,27 +1147,7 @@ function ManagerViewContent() {
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <div className="text-sm font-semibold text-foreground">{period} Coaching Plan</div>
-                      <div className="text-xs text-muted-foreground">AI-prioritized actions</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {(() => {
-                        const allLen = agendaItems.filter(i => i.included).length;
-                        const finishedHeader = pulseCompleted || (pulseStarted && pulseCurrentIdx >= allLen);
-                        if (finishedHeader) {
-                          return (
-                            <span className="text-xs font-semibold text-[#605BFF]">Complete Pulse Loop</span>
-                          );
-                        }
-                        return (
-                          <Button
-                            size="sm"
-                            className="text-xs bg-[#605BFF] hover:bg-[#4F48E3]"
-                            onClick={startOrResumePulse}
-                          >
-                            {pulseStarted ? 'Resume Pulse Loop' : 'Start Pulse Loop'}
-                          </Button>
-                        );
-                      })()}
+                      <div className="text-xs text-muted-foreground">AI-prioritized actions based on deal health and rep signals</div>
                     </div>
                   </div>
                   <div className="relative flex-1 min-h-0 overflow-y-auto pr-1" style={{ scrollbarGutter: 'stable both-edges' }}>

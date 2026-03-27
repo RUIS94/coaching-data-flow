@@ -15,7 +15,10 @@ interface ToastManagerProps {
 
 const ToastManager: React.FC<ToastManagerProps> = ({ toasts, onRemoveToast }) => {
   return (
-    <div className="fixed bottom-4 right-4 z-[99999] flex flex-col items-end justify-end gap-2">
+    <div
+      className="fixed bottom-4 right-4 z-[99999] flex flex-col items-end justify-end gap-2"
+      data-radix-dismissable-layer-branch
+    >
       {toasts.map((toast) => (
         <div key={toast.id} className="transition-all duration-300 ease-in-out">
           <Toast

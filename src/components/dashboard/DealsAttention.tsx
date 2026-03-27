@@ -8,7 +8,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { toast } from "sonner";
+import { useToastContext } from "@/contexts/ToastContext";
 
 const stages: DealStage[] = ["Discovery", "Qualification", "Proposal", "Negotiation", "Commit"];
 const riskLevels: RiskLevel[] = ["High", "Medium", "Low"];
@@ -22,6 +22,7 @@ const DealsAttention = () => {
   const [coachingDeals, setCoachingDeals] = useState<Set<string>>(
     new Set(deals.filter((d) => d.markedForCoaching).map((d) => d.id))
   );
+  const { showInfo, showSuccess } = useToastContext();
 
   const filtered = deals
     .filter((d) => {
@@ -43,10 +44,10 @@ const DealsAttention = () => {
       const next = new Set(prev);
       if (next.has(dealId)) {
         next.delete(dealId);
-        toast.info("Deal removed from coaching list");
+        showInfo("Deal removed from coaching list");
       } else {
         next.add(dealId);
-        toast.success("Deal marked for coaching");
+        showSuccess("Deal marked for coaching");
       }
       return next;
     });
