@@ -13,7 +13,7 @@ import EmptyPopup from "@/components/CommonComponents/EmptyPopup";
 
 export default function LeaderUncover() {
   const navigate = useNavigate();
-  const { showSuccess } = useToastContext();
+  const { showSuccess, showInfo } = useToastContext();
   const [repFilter, setRepFilter] = useState<string>("Sarah Chen");
   const reps = useMemo(() => {
     try {
@@ -183,6 +183,20 @@ export default function LeaderUncover() {
     setEditOpen(false);
     showSuccess("Coaching plan updated.");
   };
+  const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [scheduleChoice, setScheduleChoice] = useState<string | null>(null);
+  const [scheduledSlot, setScheduledSlot] = useState<string | null>(null);
+  const availableSlots = useMemo(
+    () => [
+      "Tue 10:00–10:30 AM",
+      "Tue 2:00–2:30 PM",
+      "Wed 9:30–10:00 AM",
+      "Thu 1:00–1:30 PM",
+      "Thu 4:00–4:30 PM",
+    ],
+    []
+  );
+  const canConfirm = useMemo(() => allReviewed && !!scheduledSlot, [allReviewed, scheduledSlot]);
   const askSamQuestions = useMemo(() => {
     const name = activeDeal?.deal_name ?? "this deal";
     return [
@@ -287,10 +301,17 @@ export default function LeaderUncover() {
             />
             <Button
               size="sm"
-              className="bg-[#605BFF] hover:bg-[#4F48E3] text-white"
-              disabled={!allReviewed}
+              className={`bg-[#605BFF] hover:bg-[#4F48E3] text-white ${!canConfirm ? "opacity-50 cursor-not-allowed" : ""}`}
+              aria-disabled={!canConfirm}
               onClick={() => {
-                if (!allReviewed) return;
+                if (!allReviewed) {
+                  showInfo("Please review all deals and schedule a session to continue.");
+                  return;
+                }
+                if (!scheduledSlot) {
+                  showInfo("Please schedule a session to continue.");
+                  return;
+                }
                 navigate("/leader-lead");
               }}
             >
@@ -395,6 +416,29 @@ export default function LeaderUncover() {
                     ))}
                   </div>
                 </div>
+                <div>
+                  <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">P-O-Q formula from AI call analysis</div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div className="rounded-md border border-border p-3 bg-gray-50">
+                      <div className="text-xs font-semibold text-foreground mb-1">Positive</div>
+                      <div className="text-xs text-muted-foreground">
+                        {repFilter}, you did a great job handling the initial pushback on timeline. Your reframe to business impact was smooth.
+                      </div>
+                    </div>
+                    <div className="rounded-md border border-border p-3 bg-gray-50">
+                      <div className="text-xs font-semibold text-foreground mb-1">Observation</div>
+                      <div className="text-xs text-muted-foreground">
+                        The next step clarity could go deeper. Consider asking a probing question to uncover the why behind the concern.
+                      </div>
+                    </div>
+                    <div className="rounded-md border border-border p-3 bg-gray-50">
+                      <div className="text-xs font-semibold text-foreground mb-1">Question</div>
+                      <div className="text-xs text-muted-foreground">
+                        Next time, how would you guide the buyer to articulate success criteria before positioning options?
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
             <div className="rounded-lg border border-border bg-card lg:col-span-2 flex flex-col">
@@ -406,7 +450,27 @@ export default function LeaderUncover() {
                   ))}
                 </ul>
               </div>
-              <div className="mt-auto px-4 py-3 flex justify-end">
+              <div className="mt-auto px-4 py-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="text-xs text-muted-foreground min-w-0">
+                    {scheduledSlot ? (
+                      <span className="text-foreground">{scheduledSlot}</span>
+                    ) : (
+                      <span>No session scheduled</span>
+                    )}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs bg-white text-[#605BFF] border border-[#605BFF] hover:bg-[#605BFF] hover:text-white"
+                    onClick={() => {
+                      setScheduleChoice(scheduledSlot);
+                      setScheduleOpen(true);
+                    }}
+                  >
+                    {scheduledSlot ? "Update Schedule" : "Schedule Session"}
+                  </Button>
+                </div>
                 <Button size="sm" variant="outline" className="text-xs" onClick={openEdit} disabled={!activeDeal}>
                   Edit
                 </Button>
@@ -437,6 +501,44 @@ export default function LeaderUncover() {
               <div className="flex justify-end gap-2">
                 <Button variant="outline" size="sm" className="text-xs" onClick={() => setEditOpen(false)}>Cancel</Button>
                 <Button size="sm" className="text-xs bg-[#605BFF] hover:bg-[#4F48E3]" onClick={saveEdit}>Save</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={scheduleOpen} onOpenChange={setScheduleOpen}>
+          <DialogContent className="sm:max-w-[460px]">
+            <DialogHeader>
+              <DialogTitle>Select a time for your session</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="grid gap-2">
+                {availableSlots.map((slot) => (
+                  <button
+                    key={slot}
+                    onClick={() => setScheduleChoice(slot)}
+                    className={`w-full text-left px-3 py-2 rounded border transition-colors ${
+                      scheduleChoice === slot ? "border-[#605BFF] bg-[#605BFF]/5" : "border-border hover:bg-gray-50"
+                    }`}
+                  >
+                    <div className="text-sm text-foreground">{slot}</div>
+                  </button>
+                ))}
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" className="text-xs" onClick={() => setScheduleOpen(false)}>Cancel</Button>
+                <Button
+                  size="sm"
+                  className="text-xs bg-[#605BFF] hover:bg-[#4F48E3]"
+                  disabled={!scheduleChoice}
+                  onClick={() => {
+                    if (!scheduleChoice) return;
+                    setScheduledSlot(scheduleChoice);
+                    setScheduleOpen(false);
+                    showSuccess(`Session scheduled: ${scheduleChoice}`);
+                  }}
+                >
+                  Save
+                </Button>
               </div>
             </div>
           </DialogContent>
