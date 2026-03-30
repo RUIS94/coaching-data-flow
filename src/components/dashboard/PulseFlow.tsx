@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle2 } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 interface Step {
   id: string;
@@ -22,7 +22,7 @@ const steps: Step[] = [
   {
     id: 'prepare',
     letter: 'P',
-    name: 'Prepare',
+    name: 'Prioritize',
     time: '~30 min',
     description: 'Review pipeline and gather insights'
   },
@@ -77,11 +77,28 @@ export default function PulseFlow({ onNavigateToStep, compact, completeOnClick, 
     const readState = () => {
       const gStr = typeof window !== 'undefined' ? sessionStorage.getItem('pulse.currentIdx') : null;
       const comp = typeof window !== 'undefined' ? sessionStorage.getItem('pulse.completed') === 'true' : false;
+      const cStr = typeof window !== 'undefined' ? sessionStorage.getItem('pulse.completedSteps') : null;
       const gIdxNum = gStr ? parseInt(gStr, 10) : 0;
       const gIdx = Number.isNaN(gIdxNum) ? 0 : gIdxNum;
       const pfIdx = mapGlobalIdxToPulseIdx(gIdx, comp);
-      const completedCount = comp ? steps.length : Math.max(0, pfIdx);
-      setCompletedSteps(new Set(steps.slice(0, completedCount).map(s => s.id)));
+      let cSet: Set<string>;
+      if (cStr) {
+        try {
+          const arr = JSON.parse(cStr) as string[];
+          cSet = new Set(arr.filter(id => steps.some(s => s.id === id)));
+        } catch {
+          cSet = new Set();
+        }
+      } else {
+        const cnt = comp ? steps.length : Math.max(0, pfIdx);
+        cSet = new Set(steps.slice(0, cnt).map(s => s.id));
+      }
+      setCompletedSteps(cSet);
+      if (typeof window !== 'undefined' && !cStr) {
+        try {
+          sessionStorage.setItem('pulse.completedSteps', JSON.stringify(Array.from(cSet)));
+        } catch { /* no-op */ }
+      }
       if (!pageStepId) {
         const act = steps[pfIdx]?.id ?? 'evaluate';
         setActiveStep(act);
@@ -91,7 +108,7 @@ export default function PulseFlow({ onNavigateToStep, compact, completeOnClick, 
     };
     readState();
     const onStorage = (e: StorageEvent) => {
-      if (e.key === 'pulse.currentIdx' || e.key === 'pulse.completed') {
+      if (e.key === 'pulse.currentIdx' || e.key === 'pulse.completed' || e.key === 'pulse.completedSteps') {
         readState();
       }
     };
@@ -105,7 +122,24 @@ export default function PulseFlow({ onNavigateToStep, compact, completeOnClick, 
     }
     onNavigateToStep?.(stepId);
     if (completeOnClick) {
-      setCompletedSteps(prev => new Set([...prev, stepId]));
+      setCompletedSteps(prev => {
+        const prevArr = Array.from(prev);
+        let prevMax = -1;
+        if (typeof window !== 'undefined') {
+          const ms = sessionStorage.getItem('pulse.maxIdx');
+          const pn = ms ? parseInt(ms, 10) : -1;
+          prevMax = Number.isNaN(pn) ? -1 : pn;
+        }
+        const uptoPrevMax = prevMax >= 0 ? steps.slice(0, prevMax + 1).map(s => s.id) : [];
+        const nextSet = new Set<string>([...prevArr, stepId, ...uptoPrevMax]);
+        if (typeof window !== 'undefined') {
+          const g = pulseStepIdToGlobalIdx(stepId);
+          const newMax = Math.max(prevMax, g);
+          sessionStorage.setItem('pulse.maxIdx', String(newMax));
+          sessionStorage.setItem('pulse.completedSteps', JSON.stringify(Array.from(nextSet)));
+        }
+        return nextSet;
+      });
     }
     const gIdx = pulseStepIdToGlobalIdx(stepId);
     if (typeof window !== 'undefined') {
@@ -122,69 +156,39 @@ export default function PulseFlow({ onNavigateToStep, compact, completeOnClick, 
 
   return (
     <div className="relative">
-      <div className="flex items-stretch justify-between gap-0">
+      <div className="flex items-center gap-2">
         {steps.map((step, index) => {
           const isActive = isStepActive(step.id);
           const isCompleted = isStepCompleted(step.id);
-
+          const activeIdx = steps.findIndex(s => s.id === activeStep);
+          const isFuture = !isCompleted && !isActive && index > activeIdx;
+          const isDoneForBadge = isCompleted;
+          const baseCls = "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors";
+          const stateCls = isActive
+            ? (isCompleted ? "bg-[#605BFF]/10 text-green-700" : "bg-[#605BFF]/10 text-foreground")
+            : isCompleted
+            ? "text-green-600 hover:bg-gray-100"
+            : isFuture
+            ? "text-muted-foreground opacity-60 hover:opacity-100 hover:text-foreground hover:bg-gray-100"
+            : "text-muted-foreground hover:text-foreground hover:bg-gray-100";
           return (
-            <div key={step.id} className="relative flex items-center flex-1 group">
+            <div key={step.id} className="flex items-center">
               <button
                 onClick={() => handleStepClick(step.id)}
-                className={`
-                  relative w-full min-w-[120px] md:min-w-[130px] px-3 py-1
-                  ${index === 0 ? 'rounded-l-md' : index === steps.length - 1 ? 'rounded-r-md' : 'rounded-none'}
-                  transition-all duration-200
-                  ${isActive
-                    ? 'bg-[#605BFF] text-white'
-                    : isCompleted
-                    ? 'bg-green-100 text-green-700 hover:bg-green-100'
-                    : 'bg-gray-50 text-gray-600 hover:bg-[#605BFF]/20'
-                  }
-                `}
+                className={`${baseCls} ${stateCls}`}
               >
-                {isCompleted && (
-                  <div className="absolute top-1 right-1 z-10 pointer-events-none">
-                    <CheckCircle2 size={16} className="text-green-600 bg-white rounded-full" />
-                  </div>
-                )}
-
-                <div className="flex flex-col items-center justify-center">
-                  <div className="text-lg font-bold leading-none">
-                    {step.letter}
-                  </div>
-                  <div className="mt-0.5 text-center leading-tight">
-                    <span className={`font-semibold text-xs ${isActive ? 'text-white' : isCompleted ? 'text-green-700' : 'text-gray-700'}`}>
-                      {step.name}
-                    </span>
-                    <span className={`ml-1 text-[11px] ${isActive ? 'text-white/90' : isCompleted ? 'text-green-600' : 'text-gray-500'}`}>
-                      · {step.time}
-                    </span>
-                  </div>
-                </div>
+                <span
+                  className={`w-5 h-5 rounded-full border border-current flex items-center justify-center text-[10px] font-bold ${
+                    isCompleted
+                      ? "bg-green-600 text-white border-green-600"
+                      : (isActive ? "bg-[#605BFF] text-white border-[#605BFF]" : "")
+                  }`}
+                >
+                  {isDoneForBadge ? <Check className="h-3 w-3" /> : index + 1}
+                </span>
+                <span>{step.name}</span>
               </button>
-
-              {index < steps.length - 1 && (
-                <>
-                  <div className={`pointer-events-none absolute right-0 top-0 h-full w-px ${isCompleted ? 'bg-green-500' : 'bg-[#605BFF]'}`} />
-                  <span
-                    className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 z-10"
-                    style={{
-                      width: 0,
-                      height: 0,
-                      borderTopWidth: 5,
-                      borderBottomWidth: 5,
-                      borderLeftWidth: 6,
-                      borderTopStyle: 'solid',
-                      borderBottomStyle: 'solid',
-                      borderLeftStyle: 'solid',
-                      borderTopColor: 'transparent',
-                      borderBottomColor: 'transparent',
-                      borderLeftColor: isCompleted ? '#22c55e' : '#605BFF',
-                    }}
-                  />
-                </>
-              )}
+              {index < steps.length - 1 && <div className="w-5 h-px bg-border mx-1" />}
             </div>
           );
         })}
@@ -203,7 +207,24 @@ export default function PulseFlow({ onNavigateToStep, compact, completeOnClick, 
             </div>
             <button
               onClick={() => {
-                setCompletedSteps(prev => new Set([...prev, activeStep]));
+                setCompletedSteps(prev => {
+                  const prevArr = Array.from(prev);
+                  let prevMax = -1;
+                  if (typeof window !== 'undefined') {
+                    const ms = sessionStorage.getItem('pulse.maxIdx');
+                    const pn = ms ? parseInt(ms, 10) : -1;
+                    prevMax = Number.isNaN(pn) ? -1 : pn;
+                  }
+                  const uptoPrevMax = prevMax >= 0 ? steps.slice(0, prevMax + 1).map(s => s.id) : [];
+                  const nextSet = new Set<string>([...prevArr, activeStep as string, ...uptoPrevMax]);
+                  if (typeof window !== 'undefined') {
+                    const curIdx = steps.findIndex(s => s.id === activeStep);
+                    const newMax = Math.max(prevMax, curIdx);
+                    sessionStorage.setItem('pulse.maxIdx', String(newMax));
+                    sessionStorage.setItem('pulse.completedSteps', JSON.stringify(Array.from(nextSet)));
+                  }
+                  return nextSet;
+                });
                 const currentIndex = steps.findIndex(s => s.id === activeStep);
                 if (currentIndex < steps.length - 1) {
                   handleStepClick(steps[currentIndex + 1].id);
@@ -212,6 +233,9 @@ export default function PulseFlow({ onNavigateToStep, compact, completeOnClick, 
                     sessionStorage.setItem('pulse.started', 'true');
                     sessionStorage.setItem('pulse.completed', 'true');
                     sessionStorage.setItem('pulse.currentIdx', String(4)); // evaluate
+                    const allIds = steps.map(s => s.id);
+                    sessionStorage.setItem('pulse.completedSteps', JSON.stringify(allIds));
+                    sessionStorage.setItem('pulse.maxIdx', String(4));
                     window.dispatchEvent(new Event('pulse:state'));
                   }
                 }

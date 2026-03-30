@@ -232,6 +232,23 @@ export default function LeaderLead() {
               disabled={!allViewed}
               onClick={() => {
                 if (!allViewed) return;
+                try {
+                  sessionStorage.setItem('pulse.started', 'true');
+                  sessionStorage.setItem('pulse.completed', 'false');
+                  sessionStorage.setItem('pulse.currentIdx', String(3));
+                  const maxStr = sessionStorage.getItem('pulse.maxIdx');
+                  const prevMax = maxStr ? parseInt(maxStr, 10) : -1;
+                  const newMax = Math.max(prevMax, 3);
+                  sessionStorage.setItem('pulse.maxIdx', String(Number.isNaN(newMax) ? 3 : newMax));
+                  const cStr = sessionStorage.getItem('pulse.completedSteps');
+                  const arr = cStr ? JSON.parse(cStr) : [];
+                  const set = new Set<string>(Array.isArray(arr) ? arr : []);
+                  set.add('lead');
+                  const stepIds = ['prepare','uncover','lead','sync','evaluate'];
+                  if (prevMax >= 0) stepIds.slice(0, Math.min(prevMax + 1, stepIds.length)).forEach(id => set.add(id));
+                  sessionStorage.setItem('pulse.completedSteps', JSON.stringify(Array.from(set)));
+                  window.dispatchEvent(new Event('pulse:state'));
+                } catch (e) { void e; }
                 navigate("/leader-sync");
               }}
             >

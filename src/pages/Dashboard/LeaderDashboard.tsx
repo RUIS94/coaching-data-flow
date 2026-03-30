@@ -1358,7 +1358,7 @@ function ManagerViewContent() {
                 <div>
                   <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Risk level</div>
                   <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${selectedDeal.risk_level === 'RED' ? 'border-status-red text-status-red' : selectedDeal.risk_level === 'AMBER' ? 'border-status-amber text-status-amber' : 'border-status-green text-status-green'}`}>
-                    {selectedDeal.risk_level}
+                    {selectedDeal.risk_level === 'RED' ? 'High' : selectedDeal.risk_level === 'AMBER' ? 'Medium' : 'Low'}
                   </div>
                 </div>
               </div>

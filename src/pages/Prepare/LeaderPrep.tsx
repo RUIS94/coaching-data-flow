@@ -199,9 +199,13 @@ export default function ManagerPrep() {
   const [modulesRep, setModulesRep] = useState<string | null>(null);
   const [dealSheetOpen, setDealSheetOpen] = useState(false);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [dealAnalyticsOpen, setDealAnalyticsOpen] = useState(false);
   const onModuleDataClick = (title: string, content: string, value: number) => {
     showSuccess(`${title}: ${content} (${value})`);
   };
+  useEffect(() => {
+    if (!dealSheetOpen) setDealAnalyticsOpen(false);
+  }, [dealSheetOpen]);
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const rec = new MediaRecorder(stream);
@@ -404,6 +408,23 @@ export default function ManagerPrep() {
                 const ids = Array.from(selectedDealIds);
                 localStorage.setItem("uncoverSelectedDealIds", JSON.stringify(ids));
                 showSuccess(`Selected ${selectedDeals.length} deals (${formatCurrency(selectedTotal)}).`);
+                try {
+                  sessionStorage.setItem('pulse.started', 'true');
+                  sessionStorage.setItem('pulse.completed', 'false');
+                  sessionStorage.setItem('pulse.currentIdx', String(1));
+                  const maxStr = sessionStorage.getItem('pulse.maxIdx');
+                  const prevMax = maxStr ? parseInt(maxStr, 10) : -1;
+                  const newMax = Math.max(prevMax, 1);
+                  sessionStorage.setItem('pulse.maxIdx', String(Number.isNaN(newMax) ? 1 : newMax));
+                  const cStr = sessionStorage.getItem('pulse.completedSteps');
+                  const arr = cStr ? JSON.parse(cStr) : [];
+                  const set = new Set<string>(Array.isArray(arr) ? arr : []);
+                  set.add('prepare');
+                  const stepIds = ['prepare','uncover','lead','sync','evaluate'];
+                  if (prevMax >= 0) stepIds.slice(0, Math.min(prevMax + 1, stepIds.length)).forEach(id => set.add(id));
+                  sessionStorage.setItem('pulse.completedSteps', JSON.stringify(Array.from(set)));
+                  window.dispatchEvent(new Event('pulse:state'));
+                } catch (e) { void e; }
                 navigate("/leader-uncover");
               }}
             >
@@ -727,139 +748,165 @@ export default function ManagerPrep() {
         </Dialog>
       </div>
         <Sheet open={dealSheetOpen} onOpenChange={setDealSheetOpen}>
-          <SheetContent side="right" className="sm:max-w-lg w-[90vw] p-0 flex flex-col [&>button]:hidden">
-            <SheetHdr className="px-6 py-4 border-b">
-              <div className="flex items-center justify-between">
-                <SheetTtl>{selectedDeal ? `${selectedDeal.account_name} / ${selectedDeal.deal_name}` : ""}</SheetTtl>
-                <button type="button" className="h-8 w-8 inline-flex items-center justify-center rounded hover:bg-gray-100" onClick={() => setDealSheetOpen(false)} aria-label="Close">
-                  <X className="h-5 w-5 text-muted-foreground" />
-                </button>
-              </div>
-            </SheetHdr>
-            {selectedDeal && (
-              <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Amount</div>
-                    <div className="text-sm font-medium text-foreground">{formatCurrency(selectedDeal.amount)}</div>
+          <SheetContent
+            side="right"
+            className={`${dealAnalyticsOpen ? 'sm:max-w-[60rem] sm:w-[60rem] w-full' : 'sm:max-w-lg w-full'} p-0 [&>button]:hidden`}
+          >
+            <div className="flex w-full h-full">
+              {dealAnalyticsOpen && (
+                <div className="w-full border-r border-border bg-white flex flex-col">
+                  <div className="px-4 py-3 border-b border-border bg-gray-50 text-sm font-semibold text-foreground flex items-center justify-between">
+                    <div>Deal Analytics</div>
+                    <button type="button" className="h-8 w-8 inline-flex items-center justify-center rounded hover:bg-gray-100" onClick={() => setDealAnalyticsOpen(false)} aria-label="Close analytics">
+                      <X className="h-5 w-5 text-muted-foreground" />
+                    </button>
                   </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Stage</div>
-                    <div className="text-sm font-medium text-foreground">{selectedDeal.stage_name}</div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Close date</div>
-                    <div className="text-sm font-medium text-foreground">
-                      {new Date(selectedDeal.close_date).toLocaleDateString()}
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {(() => { const dtc = daysTo(selectedDeal.close_date); return dtc >= 0 ? `in ${dtc} days` : `${Math.abs(dtc)} days overdue`; })()}
-                      </span>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Risk level</div>
-                    <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${selectedDeal.risk_level === 'RED' ? 'border-status-red text-status-red' : selectedDeal.risk_level === 'AMBER' ? 'border-status-amber text-status-amber' : 'border-status-green text-status-green'}`}>
-                      {selectedDeal.risk_level}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Risk Signal</div>
-                    <div>
-                      {(() => {
-                        const sig = Array.isArray(selectedDeal.risk_reasons) && selectedDeal.risk_reasons.length > 0
-                          ? (selectedDeal.risk_reasons[0].label ?? String(selectedDeal.risk_reasons[0].code).replace(/[_-]/g, ' ').toLowerCase())
-                          : 'Low Activity';
-                        return <span className={`inline-flex items-center justify-center text-center px-2 py-0.5 rounded-md text-[11px] font-medium ${riskBadgeClass(selectedDeal)}`}>{sig}</span>;
-                      })()}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Forecast</div>
-                    <div className="text-sm font-medium text-foreground">{prettyForecast(selectedDeal.forecast_category)}</div>
-                  </div>
-                  <div className="col-span-2">
-                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Categories</div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {(() => {
-                        const cs: Array<{ label: string; cls: string }> = [];
-                        const isTopRisk = selectedDeal.risk_level === 'RED' || (Array.isArray(selectedDeal.risk_reasons) && selectedDeal.risk_reasons.some((r: RiskReason) => r.severity === 'RED'));
-                        if (isTopRisk) cs.push({ label: 'Top Risk', cls: 'bg-status-red/10 text-status-red' });
-                        if (selectedDeal.forecast_category === 'COMMIT' || selectedDeal.forecast_category === 'BEST_CASE') cs.push({ label: 'Top Value', cls: 'bg-[#605BFF]/10 text-[#605BFF]' });
-                        return cs.map((c, i) => <span key={i} className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${c.cls}`}>{c.label}</span>);
-                      })()}
-                    </div>
+                  <div className="flex-1 overflow-y-auto p-3 space-y-3">
+                    <SalesMethodologyCard onDataClick={onModuleDataClick} />
+                    <BuyerJourneyCard onDataClick={onModuleDataClick} />
+                    <BuyerObjectionsCard onDataClick={onModuleDataClick} />
+                    <BuyerQuestionsCard onDataClick={onModuleDataClick} />
                   </div>
                 </div>
-                <div>
-                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Risk Reason</div>
-                  <div className="text-sm text-foreground">{riskReasonText(selectedDeal)}</div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center text-[11px] font-semibold text-foreground">
-                    {initials(selectedDeal.owner_name)}
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Rep</div>
-                    <div className="text-sm font-medium text-foreground">{selectedDeal.owner_name}</div>
-                  </div>
-                </div>
-                <div>
-                  <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Key Risks</div>
-                  <ul className="list-disc pl-5 text-sm text-foreground">
-                    {deriveKeyRisks(selectedDeal).map((r, i) => (<li key={i}>{r}</li>))}
-                  </ul>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Confidence</div>
-                    <div className="text-sm font-medium text-foreground">
-                      {(() => { const owner = mockAEReps.find(r => r.name === selectedDeal.owner_name); return owner ? confidenceFor(owner.hygiene_score) : "—"; })()}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Status</div>
-                    <div className="text-sm font-medium text-foreground">
-                      {selectedDeal.self_assessment_status ? selectedDeal.self_assessment_status : "—"}
-                    </div>
-                  </div>
-                  <div className="col-span-2">
-                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Help</div>
-                    <div className="mt-1 flex flex-wrap gap-2">
-                      {Array.isArray(selectedDeal.help_needed) && selectedDeal.help_needed.length > 0 ? (
-                        selectedDeal.help_needed.map(h => (
-                          <span key={h} className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#605BFF]/10 text-[#605BFF]">{h}</span>
-                        ))
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-            <SheetFtr className="px-6 py-3 border-t justify-start sm:justify-start gap-2">
-              {selectedDeal && (
-                <>
-                  <Button className="bg-[#605BFF] hover:bg-[#4F48E3]" size="sm" onClick={() => navigate('/leader-uncover')}>Uncover this deal</Button>
-                  <Button variant="outline" size="sm" className="hover:bg-muted hover:text-muted-foreground" onClick={() => selectedDeal && openNudge(selectedDeal.owner_name)}>
-                    Update Request
-                  </Button>
-                  <Button
-                    size="sm"
-                    className=""
-                    onClick={() => {
-                      if (selectedDeal) {
-                        setModulesRep(`${selectedDeal.account_name} - ${selectedDeal.deal_name}`);
-                        setModulesOpen(true);
-                        setDealSheetOpen(false);
-                      }
-                    }}
-                  >
-                    View Analytics
-                  </Button>
-                </>
               )}
-            </SheetFtr>
+              <div className="flex-1 w-full flex flex-col">
+                <SheetHdr className="px-6 py-4 border-b">
+                  <div className="flex items-center justify-between">
+                    <SheetTtl>{selectedDeal ? `${selectedDeal.account_name} / ${selectedDeal.deal_name}` : ""}</SheetTtl>
+                    <button type="button" className="h-8 w-8 inline-flex items-center justify-center rounded hover:bg-gray-100" onClick={() => setDealSheetOpen(false)} aria-label="Close">
+                      <X className="h-5 w-5 text-muted-foreground" />
+                    </button>
+                  </div>
+                </SheetHdr>
+                {selectedDeal && (
+                  <div className="flex-1 overflow-y-auto px-6 py-4 flex flex-col gap-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Amount</div>
+                        <div className="text-sm font-medium text-foreground">{formatCurrency(selectedDeal.amount)}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Stage</div>
+                        <div className="text-sm font-medium text-foreground">{selectedDeal.stage_name}</div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Close date</div>
+                        <div className="text-sm font-medium text-foreground">
+                          {new Date(selectedDeal.close_date).toLocaleDateString()}
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            {(() => { const dtc = daysTo(selectedDeal.close_date); return dtc >= 0 ? `in ${dtc} days` : `${Math.abs(dtc)} days overdue`; })()}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Risk level</div>
+                        <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ${selectedDeal.risk_level === 'RED' ? 'border-status-red text-status-red' : selectedDeal.risk_level === 'AMBER' ? 'border-status-amber text-status-amber' : 'border-status-green text-status-green'}`}>
+                          {selectedDeal.risk_level === 'RED' ? 'High' : selectedDeal.risk_level === 'AMBER' ? 'Medium' : 'Low'}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Risk Signal</div>
+                        <div>
+                          {(() => {
+                            const sig = Array.isArray(selectedDeal.risk_reasons) && selectedDeal.risk_reasons.length > 0
+                              ? (selectedDeal.risk_reasons[0].label ?? String(selectedDeal.risk_reasons[0].code).replace(/[_-]/g, ' ').toLowerCase())
+                              : 'Low Activity';
+                            return <span className={`inline-flex items-center justify-center text-center px-2 py-0.5 rounded-md text-[11px] font-medium ${riskBadgeClass(selectedDeal)}`}>{sig}</span>;
+                          })()}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Forecast</div>
+                        <div className="text-sm font-medium text-foreground">{prettyForecast(selectedDeal.forecast_category)}</div>
+                      </div>
+                      <div className="col-span-2">
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Categories</div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(() => {
+                            const cs: Array<{ label: string; cls: string }> = [];
+                            const isTopRisk = selectedDeal.risk_level === 'RED' || (Array.isArray(selectedDeal.risk_reasons) && selectedDeal.risk_reasons.some((r: RiskReason) => r.severity === 'RED'));
+                            if (isTopRisk) cs.push({ label: 'Top Risk', cls: 'bg-status-red/10 text-status-red' });
+                            if (selectedDeal.forecast_category === 'COMMIT' || selectedDeal.forecast_category === 'BEST_CASE') cs.push({ label: 'Top Value', cls: 'bg-[#605BFF]/10 text-[#605BFF]' });
+                            return cs.map((c, i) => <span key={i} className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${c.cls}`}>{c.label}</span>);
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Risk Reason</div>
+                      <div className="text-sm text-foreground">{riskReasonText(selectedDeal)}</div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center text-[11px] font-semibold text-foreground">
+                        {initials(selectedDeal.owner_name)}
+                      </div>
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Rep</div>
+                        <div className="text-sm font-medium text-foreground">{selectedDeal.owner_name}</div>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1">Key Risks</div>
+                      <ul className="list-disc pl-5 text-sm text-foreground">
+                        {deriveKeyRisks(selectedDeal).map((r, i) => (<li key={i}>{r}</li>))}
+                      </ul>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Confidence</div>
+                        <div className="text-sm font-medium text-foreground">
+                          {(() => { const owner = mockAEReps.find(r => r.name === selectedDeal.owner_name); return owner ? confidenceFor(owner.hygiene_score) : "—"; })()}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Status</div>
+                        <div className="text-sm font-medium text-foreground">
+                          {selectedDeal.self_assessment_status ? selectedDeal.self_assessment_status : "—"}
+                        </div>
+                      </div>
+                      <div className="col-span-2">
+                        <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Help</div>
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          {Array.isArray(selectedDeal.help_needed) && selectedDeal.help_needed.length > 0 ? (
+                            selectedDeal.help_needed.map(h => (
+                              <span key={h} className="px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#605BFF]/10 text-[#605BFF]">{h}</span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <SheetFtr className="px-6 py-3 border-t justify-start sm:justify-start gap-2">
+                  {selectedDeal && (
+                    <>
+                      <Button className="bg-[#605BFF] hover:bg-[#4F48E3]" size="sm" onClick={() => navigate('/leader-uncover')}>Uncover this deal</Button>
+                      <Button variant="outline" size="sm" className="hover:bg-muted hover:text-muted-foreground" onClick={() => selectedDeal && openNudge(selectedDeal.owner_name)}>
+                        Update Request
+                      </Button>
+                      <Button
+                        size="sm"
+                        className=""
+                        onClick={() => {
+                          if (selectedDeal) {
+                            setModulesRep(`${selectedDeal.account_name} - ${selectedDeal.deal_name}`);
+                            if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+                              setModulesOpen(true);
+                            } else {
+                              setDealAnalyticsOpen(true);
+                            }
+                          }
+                        }}
+                      >
+                        View Analytics
+                      </Button>
+                    </>
+                  )}
+                </SheetFtr>
+              </div>
+            </div>
           </SheetContent>
         </Sheet>
 

@@ -31,6 +31,18 @@ export default function LeaderEvaluate() {
   const navigate = useNavigate();
   const [weeklyOpen, setWeeklyOpen] = useState(false);
   const handleWeeklySubmit = () => {
+    try {
+      sessionStorage.setItem('pulse.started', 'true');
+      sessionStorage.setItem('pulse.completed', 'true');
+      sessionStorage.setItem('pulse.currentIdx', String(4));
+      sessionStorage.setItem('pulse.maxIdx', String(4));
+      const cStr = sessionStorage.getItem('pulse.completedSteps');
+      const arr = cStr ? JSON.parse(cStr) : [];
+      const set = new Set<string>(Array.isArray(arr) ? arr : []);
+      set.add('evaluate');
+      sessionStorage.setItem('pulse.completedSteps', JSON.stringify(Array.from(set)));
+      window.dispatchEvent(new Event('pulse:state'));
+    } catch (e) { void e; }
     setWeeklyOpen(false);
   };
   const coachingCadence = "100%";
@@ -144,7 +156,17 @@ export default function LeaderEvaluate() {
           <Button
             size="sm"
             className="bg-[#605BFF] text-white hover:bg-[#4F48E3]"
-            onClick={() => navigate("/manager-prep")}
+            onClick={() => {
+              try {
+                sessionStorage.removeItem('pulse.completedSteps');
+                sessionStorage.removeItem('pulse.maxIdx');
+                sessionStorage.setItem('pulse.started', 'false');
+                sessionStorage.setItem('pulse.completed', 'false');
+                sessionStorage.setItem('pulse.currentIdx', String(0));
+                window.dispatchEvent(new Event('pulse:state'));
+              } catch (e) { void e; }
+              navigate("/manager-prep");
+            }}
           >
             Start New Pulse Loop
           </Button>

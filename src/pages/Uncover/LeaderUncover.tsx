@@ -312,6 +312,23 @@ export default function LeaderUncover() {
                   showInfo("Please schedule a session to continue.");
                   return;
                 }
+                try {
+                  sessionStorage.setItem('pulse.started', 'true');
+                  sessionStorage.setItem('pulse.completed', 'false');
+                  sessionStorage.setItem('pulse.currentIdx', String(2));
+                  const maxStr = sessionStorage.getItem('pulse.maxIdx');
+                  const prevMax = maxStr ? parseInt(maxStr, 10) : -1;
+                  const newMax = Math.max(prevMax, 2);
+                  sessionStorage.setItem('pulse.maxIdx', String(Number.isNaN(newMax) ? 2 : newMax));
+                  const cStr = sessionStorage.getItem('pulse.completedSteps');
+                  const arr = cStr ? JSON.parse(cStr) : [];
+                  const set = new Set<string>(Array.isArray(arr) ? arr : []);
+                  set.add('uncover');
+                  const stepIds = ['prepare','uncover','lead','sync','evaluate'];
+                  if (prevMax >= 0) stepIds.slice(0, Math.min(prevMax + 1, stepIds.length)).forEach(id => set.add(id));
+                  sessionStorage.setItem('pulse.completedSteps', JSON.stringify(Array.from(set)));
+                  window.dispatchEvent(new Event('pulse:state'));
+                } catch (e) { void e; }
                 navigate("/leader-lead");
               }}
             >
@@ -350,7 +367,7 @@ export default function LeaderUncover() {
                             </div>
                           </div>
                           <div className="text-[11px] px-2 py-0.5 rounded-full" style={{ backgroundColor: `${riskColor(d.risk_level)}20`, color: riskColor(d.risk_level) }}>
-                            {d.risk_level?.toLowerCase()}
+                            {d.risk_level ? (d.risk_level === 'RED' ? 'High' : d.risk_level === 'AMBER' ? 'Medium' : 'Low') : '—'}
                           </div>
                         </div>
                       </button>
@@ -365,7 +382,7 @@ export default function LeaderUncover() {
                   {activeDeal ? `${activeDeal.deal_name} — ${formatCurrency(activeDeal.amount)}` : "—"}
                 </div>
                 <div className="text-[11px] px-2 py-0.5 rounded-full" style={{ backgroundColor: `${riskColor(activeDeal?.risk_level)}20`, color: riskColor(activeDeal?.risk_level) }}>
-                  {activeDeal?.risk_level || "—"}
+                  {activeDeal?.risk_level ? (activeDeal.risk_level === 'RED' ? 'High' : activeDeal.risk_level === 'AMBER' ? 'Medium' : 'Low') : "—"}
                 </div>
               </div>
               <div className="p-4 space-y-5 overflow-y-auto" style={{ maxHeight: "75vh" }}>

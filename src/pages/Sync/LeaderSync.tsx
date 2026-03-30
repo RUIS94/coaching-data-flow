@@ -241,7 +241,22 @@ export default function LeaderSync() {
           <Button
             size="sm"
             className="bg-[#605BFF] text-white hover:bg-[#4F48E3]"
-            onClick={() => navigate("/leader-evaluate")}
+            onClick={() => {
+              try {
+                sessionStorage.setItem('pulse.started', 'true');
+                sessionStorage.setItem('pulse.completed', 'true');
+                sessionStorage.setItem('pulse.currentIdx', String(4));
+                sessionStorage.setItem('pulse.maxIdx', String(4));
+                const cStr = sessionStorage.getItem('pulse.completedSteps');
+                const arr = cStr ? JSON.parse(cStr) : [];
+                const set = new Set<string>(Array.isArray(arr) ? arr : []);
+                set.add('sync');
+                const all = new Set<string>([...set, 'prepare', 'uncover', 'lead', 'sync']);
+                sessionStorage.setItem('pulse.completedSteps', JSON.stringify(Array.from(all)));
+                window.dispatchEvent(new Event('pulse:state'));
+              } catch (e) { void e; }
+              navigate("/leader-evaluate");
+            }}
           >
             Complete Cycle <ChevronRight className="h-4 w-4 ml-1" /> Evaluate
           </Button>
