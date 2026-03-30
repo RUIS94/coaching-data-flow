@@ -4,6 +4,7 @@ import { PageHeader } from "@/components/CommonComponents/PageHeader";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { mockAEReps, mockDeals, formatCurrency, type Deal } from "@/data/mock";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToastContext } from "@/contexts/ToastContext";
 import { ChevronRight } from "lucide-react";
 import PulseFlow from "@/components/dashboard/PulseFlow";
@@ -13,17 +14,22 @@ import EmptyPopup from "@/components/CommonComponents/EmptyPopup";
 export default function LeaderUncover() {
   const navigate = useNavigate();
   const { showSuccess } = useToastContext();
-  const [repFilter, setRepFilter] = useState<string>("all");
+  const [repFilter, setRepFilter] = useState<string>("Sarah Chen");
   const reps = useMemo(() => {
     try {
       const src = Array.isArray(mockAEReps) ? mockAEReps : [];
-      const names = src.map(r => r && r.name).filter(Boolean) as string[];
-      return ["all", ...Array.from(new Set(names))];
+      const names = Array.from(new Set(src.map(r => r && r.name).filter(Boolean) as string[]));
+      return names;
     } catch {
-      return ["all"];
+      return [];
     }
   }, []);
-  const repOptions = useMemo(() => (Array.isArray(reps) ? reps : ["all"]), [reps]);
+  const repOptions = useMemo(() => (Array.isArray(reps) ? reps : []), [reps]);
+  useEffect(() => {
+    if (Array.isArray(reps) && reps.length > 0 && !reps.includes(repFilter)) {
+      setRepFilter(reps[0]);
+    }
+  }, [reps, repFilter]);
   const selectedIdsFromPrep = useMemo<string[]>(() => {
     try {
       const raw = localStorage.getItem("uncoverSelectedDealIds");
@@ -39,7 +45,7 @@ export default function LeaderUncover() {
     return deals.filter(d => selectedIdsFromPrep.includes(d.deal_id));
   }, [selectedIdsFromPrep]);
   const dealsToAnalyze = useMemo<Deal[]>(
-    () => (repFilter === "all" ? selectedDealsFromPrep : selectedDealsFromPrep.filter(d => d.owner_name === repFilter)),
+    () => selectedDealsFromPrep.filter(d => d.owner_name === repFilter),
     [selectedDealsFromPrep, repFilter]
   );
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
@@ -142,6 +148,41 @@ export default function LeaderUncover() {
     setEvidItem(item);
     setEvidOpen(true);
   };
+  const [reviewedIds, setReviewedIds] = useState<Set<string>>(new Set());
+  const allReviewed = useMemo(
+    () => (dealsToAnalyze.length > 0) && dealsToAnalyze.every(d => reviewedIds.has(d.deal_id)),
+    [dealsToAnalyze, reviewedIds]
+  );
+  useEffect(() => {
+    if (activeDeal) {
+      setReviewedIds(prev => {
+        if (prev.has(activeDeal.deal_id)) return prev;
+        const next = new Set(prev);
+        next.add(activeDeal.deal_id);
+        return next;
+      });
+    }
+  }, [activeDeal]);
+  const [planOverrides, setPlanOverrides] = useState<Record<string, string[]>>({});
+  const currentPlanItems = useMemo<string[]>(
+    () => (activeDeal ? (planOverrides[activeDeal.deal_id] ?? planForDeal(activeDeal)) : []),
+    [activeDeal, planOverrides]
+  );
+  const [editOpen, setEditOpen] = useState(false);
+  const [editText, setEditText] = useState("");
+  const openEdit = () => {
+    if (!activeDeal) return;
+    const lines = currentPlanItems.join("\n");
+    setEditText(lines);
+    setEditOpen(true);
+  };
+  const saveEdit = () => {
+    if (!activeDeal) return;
+    const items = editText.split("\n").map(s => s.trim()).filter(Boolean);
+    setPlanOverrides(prev => ({ ...prev, [activeDeal.deal_id]: items }));
+    setEditOpen(false);
+    showSuccess("Coaching plan updated.");
+  };
   const askSamQuestions = useMemo(() => {
     const name = activeDeal?.deal_name ?? "this deal";
     return [
@@ -221,16 +262,16 @@ export default function LeaderUncover() {
           <div className="flex items-center gap-3">
             <Select value={repFilter} onValueChange={setRepFilter}>
               <SelectTrigger className="w-56 h-8 text-xs bg-white">
-                <SelectValue placeholder="All Reps" />
+                <SelectValue placeholder="Select Rep" />
               </SelectTrigger>
               <SelectContent>
-                {(Array.isArray(repOptions) ? repOptions : ["all"]).map(name => (
+                {(Array.isArray(repOptions) ? repOptions : []).map(name => (
                   <SelectItem
                     key={name}
                     value={name}
                     className="text-xs hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[highlighted]:text-foreground"
                   >
-                    {name === "all" ? "All Reps" : name}
+                    {name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -244,6 +285,19 @@ export default function LeaderUncover() {
               sheetSide="right"
               description="Ask about risk drivers, evidence, or coaching tactics for this deal"
             />
+            <Button
+              size="sm"
+              className="bg-[#605BFF] hover:bg-[#4F48E3] text-white"
+              disabled={!allReviewed}
+              onClick={() => {
+                if (!allReviewed) return;
+                navigate("/leader-lead");
+              }}
+            >
+              Confirm Plan
+              <ChevronRight className="h-4 w-4 ml-1" />
+              Lead
+            </Button>
           </div>
         </PageHeader>
         </div>
@@ -260,8 +314,11 @@ export default function LeaderUncover() {
                     return (
                       <button
                         key={d.deal_id}
-                        onClick={() => setActiveDeal(d)}
-                        className={`w-full text-left rounded-lg border border-border p-2 hover:bg-gray-50 ${active ? "ring-1 ring-[#605BFF]" : ""}`}
+                      onClick={() => {
+                        setActiveDeal(d);
+                        setReviewedIds(prev => new Set([...Array.from(prev), d.deal_id]));
+                      }}
+                      className={`w-full text-left rounded-lg border p-2 ${reviewedIds.has(d.deal_id) ? "bg-green-50 border-green-200 hover:bg-green-100" : "border-border hover:bg-gray-50"} ${active ? "ring-1 ring-[#605BFF]" : ""}`}
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div className="flex items-center gap-2 min-w-0">
@@ -344,16 +401,14 @@ export default function LeaderUncover() {
               <div className="px-4 py-3 border-b border-border bg-gray-50 text-sm font-semibold text-foreground">Coaching Plan</div>
               <div className="p-4 space-y-2">
                 <ul className="list-disc pl-5 space-y-2 text-sm text-foreground">
-                  {planForDeal(activeDeal).map((p, i) => (
+                  {currentPlanItems.map((p, i) => (
                     <li key={i}>{p}</li>
                   ))}
                 </ul>
               </div>
-              <div className="px-4 py-3 border-t border-border">
-                <Button className="text-xs" onClick={() => navigate("/leader-lead")}>
-                  Confirm Plan
-                  <ChevronRight className="h-4 w-4 ml-1" />
-                  Lead
+              <div className="mt-auto px-4 py-3 flex justify-end">
+                <Button size="sm" variant="outline" className="text-xs" onClick={openEdit} disabled={!activeDeal}>
+                  Edit
                 </Button>
               </div>
             </div>
@@ -366,6 +421,26 @@ export default function LeaderUncover() {
           content={evidItem?.content || ""}
           value={evidItem?.value || 0}
         />
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent className="sm:max-w-[560px]">
+            <DialogHeader>
+              <DialogTitle>Edit Coaching Plan</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <textarea
+                value={editText}
+                onChange={(e) => setEditText(e.target.value)}
+                rows={8}
+                className="w-full px-3 py-2 border border-input rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="One item per line"
+              />
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" className="text-xs" onClick={() => setEditOpen(false)}>Cancel</Button>
+                <Button size="sm" className="text-xs bg-[#605BFF] hover:bg-[#4F48E3]" onClick={saveEdit}>Save</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </ErrorBoundary>
   );

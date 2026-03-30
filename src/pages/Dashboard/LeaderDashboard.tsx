@@ -579,6 +579,9 @@ function ManagerViewContent() {
     if (hasAmber) return 'bg-status-amber/10 text-status-amber';
     return 'bg-secondary/60 text-muted-foreground';
   };
+  const focusCount = topRiskAlerts.length;
+  const coachRepsCount = Array.from(new Set(currentWindowDeals.filter(d => d.need_coaching || (Array.isArray(d.help_needed) && d.help_needed.length > 0)).map(d => d.owner_name))).length;
+  const noiseCount = currentWindowDeals.filter(d => d.forecast_category === 'PIPELINE' && d.amount < 100000).length;
   const priorityOf = (d: Deal) => {
     if (d.risk_level === 'RED' || d.amount >= 150000) return 'P1';
     if (d.risk_level === 'AMBER' || d.amount >= 80000) return 'P2';
@@ -832,9 +835,8 @@ function ManagerViewContent() {
         />
       </div>
 
-      {/* Three Column Layout: 40% / 30% / 30% */}
       <div className="grid grid-cols-1 lg:grid-cols-10 gap-4 px-4 sm:px-6 pb-6">
-        <div className="rounded-lg border border-border bg-card p-4 lg:col-span-4 flex flex-col min-h-0 max-h-[calc(100vh-300px)]" id="priority-deals-section" ref={priorityDealsRef}>
+        <div className="rounded-lg border border-border bg-card p-4 lg:col-span-5 flex flex-col min-h-0 max-h-[calc(100vh-300px)]" id="priority-deals-section" ref={priorityDealsRef}>
           <div className="flex items-start justify-between mb-3">
             <div>
               <div className="text-sm font-semibold text-foreground">Critical Deals</div>
@@ -1135,145 +1137,42 @@ function ManagerViewContent() {
             })()}
           </div>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:col-span-6">
-          <div className="rounded-lg border border-border bg-card p-4 flex flex-col min-h-0 max-h-[calc(100vh-300px)]">
-            {(() => {
-              const totalMinutes = agendaItems.filter(i => i.included).reduce((s, i) => s + i.minutes, 0);
-              const hours = totalMinutes / 60;
-              const rounded = Math.round(hours * 2) / 2;
-              const period = timeRange === 'This week' ? "This Week's" : timeRange === 'This month' ? "This Month's" : timeRange === 'This quarter' ? "This Quarter's" : "This Year's";
-              return (
-                <>
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <div className="text-sm font-semibold text-foreground">{period} Coaching Plan</div>
-                      <div className="text-xs text-muted-foreground">AI-prioritized actions based on deal health and rep signals</div>
-                    </div>
-                  </div>
-                  <div className="relative flex-1 min-h-0 overflow-y-auto pr-1" style={{ scrollbarGutter: 'stable both-edges' }}>
-                    {(() => {
-                      const all = agendaItems.filter(i => i.included);
-                      const finished = pulseCompleted || (pulseStarted && pulseCurrentIdx >= all.length);
-                      const colorBlue = 'bg-[#605BFF]';
-                      const colorGreen = 'bg-status-green';
-                      const colorGray = 'bg-muted/60';
-                      const statusOf = (idx: number) => {
-                        if (finished) return 'green';
-                        if (!pulseStarted) return 'gray';
-                        if (idx < pulseCurrentIdx) return 'green';
-                        if (idx === pulseCurrentIdx) return 'blue';
-                        return 'gray';
-                      };
-                      const focusCount = topRiskAlerts.length;
-                      const coachRepsCount = Array.from(new Set(currentWindowDeals.filter(d => d.need_coaching || (Array.isArray(d.help_needed) && d.help_needed.length > 0)).map(d => d.owner_name))).length;
-                      const noiseCount = currentWindowDeals.filter(d => d.forecast_category === 'PIPELINE' && d.amount < 100000).length;
-                      return (
-                        <div className="space-y-3">
-                          {all.map((i, idxGlobal) => {
-                            const isFirstGlobal = idxGlobal === 0;
-                            const isLastGlobal = idxGlobal === all.length - 1;
-                            const s = statusOf(idxGlobal);
-                            const dotClass =
-                              s === 'green' ? 'bg-status-green' :
-                              s === 'blue' ? 'bg-[#605BFF]' :
-                              'bg-muted-foreground/40';
-                            let topLineClass = '';
-                            if (!isFirstGlobal) {
-                              const prevIdxGlobal = idxGlobal - 1;
-                              const ps = statusOf(prevIdxGlobal);
-                              if (ps !== 'gray' && s !== 'gray') {
-                                topLineClass = ps === 'green' && s === 'green' ? colorGreen : colorBlue;
-                              } else {
-                                topLineClass = colorGray;
-                              }
-                            }
-                            let bottomLineClass = '';
-                            if (!isLastGlobal) {
-                              const nextIdxGlobal = idxGlobal + 1;
-                              const ns = statusOf(nextIdxGlobal);
-                              if (s !== 'gray' && ns !== 'gray') {
-                                bottomLineClass = s === 'green' && ns === 'green' ? colorGreen : colorBlue;
-                              } else {
-                                bottomLineClass = colorGray;
-                              }
-                            }
-                            return (
-                              <div
-                                key={i.id}
-                                ref={(el) => { stepRefs.current[i.id] = el }}
-                                className="pl-10 cursor-default"
-                              >
-                                <div className="relative h-20 flex flex-col justify-center">
-                                  {!isFirstGlobal && <div className={`absolute left-[-20px] top-[-12px] bottom-1/2 w-0.5 ${topLineClass}`} />}
-                                  {!isLastGlobal && <div className={`absolute left-[-20px] top-1/2 bottom-[-12px] w-0.5 ${bottomLineClass}`} />}
-                                  <div className={`absolute left-[-20px] top-1/2 -translate-x-1/2 -translate-y-1/2 h-3 w-3 rounded-full ring-2 ring-background ${dotClass}`} />
-                                  {(() => {
-                                    const clickable = s === 'green' || s === 'blue';
-                                    const title = i.id === 'prep' ? 'Prepare' : i.id === 'uncover' ? 'Uncover' : i.id === 'lead' ? 'Lead' : i.title;
-                                    const cls = clickable ? 'text-[11px] font-medium text-[#605BFF] cursor-pointer hover:underline' : 'text-[11px] text-muted-foreground';
-                                    return (
-                                      <div
-                                        className={cls}
-                                        onClick={() => {
-                                          if (!clickable) return;
-                                          const path = stepIdToRoute(i.id);
-                                          if (path) navigate(path);
-                                        }}
-                                      >
-                                        {title}
-                                      </div>
-                                    );
-                                  })()}
-                                  {i.id === 'prep' ? (
-                                    <div className="mt-1 text-sm">
-                                      <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-status-red/10 text-status-red mr-2">Focus</span>
-                                      <span
-                                        className="text-foreground cursor-pointer underline decoration-dotted"
-                                        onClick={() => navigate('/manager-prep')}
-                                        role="button"
-                                        tabIndex={0}
-                                      >
-                                        {focusCount} deals need intervention
-                                      </span>
-                                    </div>
-                                  ) : i.id === 'uncover' ? (
-                                    <div className="mt-1 space-y-1">
-                                      <div
-                                        className="text-sm cursor-pointer"
-                                        onClick={() => navigate('/leader-uncover')}
-                                      >
-                                        <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#FF8E1C]/10 text-[#FF8E1C] mr-2">Coach</span>
-                                        <span className="text-foreground">{coachRepsCount} reps flagged for skill gaps</span>
-                                      </div>
-                                      <div
-                                        className="text-sm cursor-pointer"
-                                        onClick={() => navigate('/leader-uncover')}
-                                      >
-                                        <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-secondary/60 text-muted-foreground mr-2">Deprioritize</span>
-                                        <span className="text-foreground">{noiseCount} Low-value pipeline noise</span>
-                                      </div>
-                                    </div>
-                                  ) : i.id === 'lead' ? (
-                                    <div className="mt-1">
-                                      <div className="text-sm text-foreground">{completedCoachingReps.length} session Completed, {upcomingCoachingReps.length} session Upcoming</div>
-                                      <div className="text-xs text-muted-foreground underline decoration-dotted">
-                                        {upcomingCoachingReps.length ? `${upcomingCoachingReps.join(', ')}` : 'No reps pending scheduling'}
-                                      </div>
-                                    </div>
-                                  ) : null}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    })()}
-                  </div>
-                </>
-              );
-            })()}
+        <div className="lg:col-span-5 flex flex-col gap-4 min-h-0 max-h-[calc(100vh-300px)]">
+          <div className="rounded-lg bg-card p-0 flex flex-col min-h-0" style={{ flex: '0 0 10%' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 h-full">
+              <div
+                className="rounded-lg bg-muted/40 p-3 cursor-pointer hover:bg-[#605BFF]/10 transition-colors"
+                onClick={() => goToPriorityDeals('risk')}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-status-red/10 text-status-red">Focus</span>
+                  <div className="text-sm font-semibold text-foreground">Review High-Risk Deals</div>
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">{focusCount} deals need immediate intervention</div>
+              </div>
+              <div
+                className="rounded-lg bg-muted/40 p-3 cursor-pointer hover:bg-[#605BFF]/10 transition-colors"
+                onClick={() => navigate('/manager-prep')}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#FF8E1C]/10 text-[#FF8E1C]">Coach</span>
+                  <div className="text-sm font-semibold text-foreground">Address Rep Skill Gaps</div>
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">{coachRepsCount} reps flagged for skill gaps</div>
+              </div>
+              <div
+                className="rounded-lg bg-muted/40 p-3 cursor-pointer hover:bg-[#605BFF]/10 transition-colors"
+                onClick={() => showSuccess('No low-value deals to review this week.')}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-gray-300 text-gray-700">Deprioritize</span>
+                  <div className="text-sm font-semibold text-foreground">Low-Value Deals</div>
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">{noiseCount} deals identified as pipeline noise</div>
+              </div>
+            </div>
           </div>
-          <div className="rounded-lg border border-border bg-card p-4 flex flex-col min-h-0 max-h-[calc(100vh-300px)]">
+          <div className="rounded-lg border border-border bg-card p-4 flex flex-col min-h-0" style={{ flex: '1 1 70%' }}>
             <div className="flex items-start justify-between mb-3">
               <div>
                 <h2 className="text-sm font-semibold text-foreground">Rep Tiering {tieringHeaderRange}</h2>
@@ -1302,7 +1201,13 @@ function ManagerViewContent() {
                   <div className="grid grid-cols-1 gap-3">
                     {sorted.map(rep => {
                       const ready = rep.hygiene_score >= 80 && rep.overdue_actions === 0;
-                      const tag = severityOf(rep);
+                      const tag = ((): 'atRisk' | 'watch' | 'onTrack' => {
+                        const ds = currentWindowDeals.filter(d => d.owner_name === rep.name);
+                        const needHelp = ds.some(d => d.forecast_category === 'COMMIT' && d.risk_level === 'RED');
+                        if (needHelp || rep.hygiene_score < 75 || rep.slippage_count >= 2 || rep.overdue_actions >= 2) return 'atRisk';
+                        if (rep.hygiene_score < 85 || rep.slippage_count >= 1 || rep.overdue_actions >= 1) return 'watch';
+                        return 'onTrack';
+                      })();
                       const tagCls = tag === 'atRisk' ? 'bg-status-red/10 text-status-red' : tag === 'watch' ? 'bg-status-amber/10 text-status-amber' : 'bg-status-green/10 text-status-green';
                       const tagLabel = tag === 'atRisk' ? 'At Risk' : tag === 'watch' ? 'Watch' : 'On Track';
                       return (
