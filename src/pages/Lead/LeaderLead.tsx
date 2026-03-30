@@ -235,7 +235,7 @@ export default function LeaderLead() {
                 navigate("/leader-sync");
               }}
             >
-              Begin Tracking <span className="mx-1">{">"}</span> Sync
+              Begin Tracking <ChevronRight className="h-4 w-4 ml-1" /> Sync
             </Button>
         </div>
       </PageHeader>
