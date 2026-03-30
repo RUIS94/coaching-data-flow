@@ -3,11 +3,10 @@ import { ToastProvider, useToastContext } from "@/contexts/ToastContext";
 import ToastManager from "@/components/CommonComponents/ToastManager";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { createPortal } from "react-dom";
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
 import { Heart, Plus, Bell, Mail, Menu, Gauge, Calendar, ClipboardList, LayoutDashboard, BarChart3, Users2, Video, Folder, ChevronDown } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useState } from "react";
-import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import MeetingIntelligence from "./pages/MeetingIntelligence";
 import MeetingList from "./pages/MeetingList/MeetingList";
@@ -40,7 +39,7 @@ const ToastRenderer = () => {
 };
 
 const App = () => {
-  const [isNavCollapsed, setIsNavCollapsed] = useState(false);
+  const [isNavCollapsed, setIsNavCollapsed] = useState(true);
   const [role, setRole] = useState<"leader" | "sales">("leader");
   const [isCoachingOpen, setIsCoachingOpen] = useState(true);
 
@@ -350,7 +349,7 @@ const App = () => {
                 <div className="h-full">
                   <ToastRenderer />
                   <Routes>
-                    <Route path="/" element={<Index />} />
+                    <Route path="/" element={<Navigate to="/manager-dashboard" replace />} />
                     <Route path="/meeting-intelligence" element={<MeetingIntelligence />} />
                     <Route path="/meeting-list" element={<MeetingList />} />
                       <Route path="/sam-drive" element={<FileManager />} />
